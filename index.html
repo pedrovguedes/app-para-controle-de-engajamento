@@ -114,8 +114,12 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
       <label>semana:</label>
       <select id="week-select" onchange="renderDashboard()"></select>
     </div>
-    <div class="section-header"><div class="section-dot"></div><div class="section-title">contas — Instagram</div></div>
+    <div class="section-header"><div class="section-dot"></div><div class="section-title">contas — todas as plataformas</div></div>
     <div id="accounts-list"></div>
+
+    <div class="section-header"><div class="section-dot" style="background:var(--amber)"></div><div class="section-title">🏆 ranking de engajamento</div></div>
+    <div id="ranking-list"></div>
+
     <div class="section-header"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title">gráficos comparativos</div></div>
     <div class="charts-grid">
       <div class="chart-card" style="grid-column:1/-1">
@@ -185,18 +189,19 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 <div class="toast" id="toast"></div>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXoKscXcwHk7Nca-GTZZcKcXPut8AEAkXLvILxWVkfD9s4Y4KSK-TNVGJw1I1mNWFq/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCnh5q9y3UR13BNn3DvOgJoVwHK_CEE7F02hMkJMmtj4tfX4kWOUHT6VY0BLrzQtt-/exec';
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
-  {handle:'@pavanato2026',      dono:'Vinicius Pereira'},
-  {handle:'@nikolas.pavanato',  dono:'Julio Rodrigues'},
-  {handle:'@pavanatobr2026',    dono:'Julio Niglassi'},
-  {handle:'@pavanatotramontina',dono:'Marcus Tramontina'},
-  {handle:'@jairbolsonaro0026', dono:'Leticia'},
-  {handle:'Bianca',             dono:'Bianca'},
+  {handle:'@pavanato2026',       dono:'Vinicius Pereira',  plat:'Instagram'},
+  {handle:'@nikolas.pavanato',   dono:'Julio Rodrigues',   plat:'Instagram'},
+  {handle:'@pavanatobr2026',     dono:'Julio Niglassi',    plat:'Instagram'},
+  {handle:'@pavanatotramontina', dono:'Marcus Tramontina', plat:'Instagram'},
+  {handle:'@jairbolsonaro0026',  dono:'Leticia',           plat:'Instagram'},
+  {handle:'Bianca',              dono:'Bianca',            plat:'Instagram'},
+  {handle:'@pavanatotramontina', dono:'Vinicius Pereira',  plat:'TikTok'},
 ];
-const COLORS = ['#7c6af7','#e85d75','#3ecf8e','#f5a623','#e1306c','#64b5f6'];
+const COLORS = ['#7c6af7','#e85d75','#3ecf8e','#f5a623','#e1306c','#64b5f6','#ff3b5c'];
 const GRID = 'rgba(255,255,255,0.05)';
 const TICK = '#6b6b80';
 const MONO = 'IBM Plex Mono';
@@ -271,8 +276,17 @@ function renderDashboard() {
     const tc=seg>0?'up':seg<0?'down':'neutral';
     const ti=seg>0?'▲':seg<0?'▼':'=';
     const v=parseFloat(r.views)||0, it=parseFloat(r.interacoes)||0;
+    const plat=r.plataforma||'Instagram';
+    const platColor=plat==='TikTok'?'#ff3b5c':'#e1306c';
+    const platBg=plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
     return `<div class="account-card">
-      <div class="acc-header"><div><div class="acc-handle">${r.conta}</div><div class="acc-owner">${r.dono}</div></div>
+      <div class="acc-header"><div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="acc-handle">${r.conta}</div>
+          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${platBg};color:${platColor}">${plat}</span>
+        </div>
+        <div class="acc-owner">${r.dono}</div>
+      </div>
       <div class="trend-badge ${tc}">${ti} ${seg>=0?'+':''}${fmt(seg)}</div></div>
       <div class="metrics-row">
         <div class="metric-pill"><div class="metric-pill-label">Visualizações</div><div class="metric-pill-val">${fmt(v)}</div></div>
@@ -281,6 +295,45 @@ function renderDashboard() {
         <div class="metric-pill"><div class="metric-pill-label">Conteúdos</div><div class="metric-pill-val">${r.conteudos||'—'}</div></div>
       </div></div>`;
   }).join('');
+
+  // RANKING
+  const medals = ['🥇','🥈','🥉'];
+  const ranked = rows.map(r => {
+    const v = parseFloat(r.views)||0;
+    const it = parseFloat(r.interacoes)||0;
+    const seg = Math.abs(parseFloat(r.seguidores)||1);
+    const engRate = v > 0 ? (it/v*100) : 0;
+    const segScore = seg > 0 ? (it/seg) : 0;
+    const score = (engRate * 0.6) + (segScore * 0.4);
+    return {...r, engRate, segScore, score};
+  }).sort((a,b) => b.score - a.score);
+
+  document.getElementById('ranking-list').innerHTML = `
+    <div class="chart-card">
+      <div class="chart-title">proporção interações × seguidores (maior = melhor)</div>
+      ${ranked.map((r,i) => {
+        const plat = r.plataforma||'Instagram';
+        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
+        const barW = Math.min(100, (r.score / (ranked[0].score||1)) * 100);
+        const medal = medals[i] || `#${i+1}`;
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:18px;width:28px;text-align:center">${medal}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${r.conta}</span>
+              <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${plat}</span>
+            </div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:${COLORS[i%COLORS.length]};border-radius:4px;transition:width 0.5s"></div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${r.engRate.toFixed(1)}%</div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng. rate</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
   const labels=rows.map(r=>r.dono||r.conta);
   const vs=rows.map(r=>parseFloat(r.views)||0);
   const is=rows.map(r=>parseFloat(r.interacoes)||0);
@@ -338,7 +391,10 @@ function buildForm() {
   document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('form-accounts').innerHTML = CONTAS.map((c,i)=>`
     <div class="acc-form-card">
-      <div class="acc-form-name">${c.handle}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div class="acc-form-name">${c.handle}</div>
+        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)'};color:${c.plat==='TikTok'?'#ff3b5c':'#e1306c'}">${c.plat}</span>
+      </div>
       <div class="acc-form-owner">${c.dono}</div>
       <div class="form-fields">
         <div class="field-group"><label>Visualizações</label><input type="number" id="v${i}" placeholder="ex: 4600000"></div>
@@ -352,9 +408,10 @@ function buildForm() {
 function saveWeek() {
   const date = document.getElementById('form-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-  const lines = CONTAS.map((c,i)=>`${date},${c.handle},${c.dono},${document.getElementById('v'+i).value||0},${document.getElementById('i'+i).value||0},${document.getElementById('s'+i).value||0},${document.getElementById('c'+i).value||0}`);
+  const lines = CONTAS.map((c,i)=>`${date},${c.handle},${c.dono},${c.plat},${document.getElementById('v'+i).value||0},${document.getElementById('i'+i).value||0},${document.getElementById('s'+i).value||0},${document.getElementById('c'+i).value||0}`);
   const csv = lines.join('\n');
-  document.getElementById('copy-box').textContent = 'semana,conta,dono,views,interacoes,seguidores,conteudos\n' + csv;
+  const full = 'semana,conta,dono,plataforma,views,interacoes,seguidores,conteudos\n' + csv;
+  document.getElementById('copy-box').textContent = full;
   document.getElementById('copy-result').style.display = 'block';
   navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
 }
