@@ -186,7 +186,6 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 
 <script>
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
-const SHEET_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(SHEET_CSV);
 
 const CONTAS = [
   {handle:'@pavanato2026',      dono:'Vinicius Pereira'},
@@ -211,22 +210,42 @@ function showTab(tab, el) {
   if (tab==='historico') renderHistorico();
 }
 
-async function loadData() {
+async function fetchProxy(url) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), 7000);
   try {
-    const r = await fetch(SHEET_URL + '&t=' + Date.now());
+    const r = await fetch(url, {signal: ctrl.signal});
+    clearTimeout(id);
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const txt = await r.text();
-    const p = Papa.parse(txt.trim(), {header:true, skipEmptyLines:true});
-    allData = p.data;
-    populateWeeks();
-    renderDashboard();
-    document.getElementById('dash-loading').style.display='none';
-    document.getElementById('dash-content').style.display='block';
-  } catch(e) {
-    document.getElementById('dash-loading').style.display='none';
+    return await r.text();
+  } catch(e) { clearTimeout(id); throw e; }
+}
+
+async function loadData() {
+  const proxies = [
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(SHEET_CSV),
+    'https://corsproxy.io/?' + encodeURIComponent(SHEET_CSV),
+    'https://proxy.cors.sh/' + SHEET_CSV,
+  ];
+  let txt = null;
+  for (const url of proxies) {
+    try { txt = await fetchProxy(url); if (txt && txt.includes(',')) break; txt = null; }
+    catch(e) { txt = null; }
+  }
+  document.getElementById('dash-loading').style.display='none';
+  document.getElementById('dash-content').style.display='block';
+  if (!txt) {
     const er = document.getElementById('dash-error');
     er.style.display='block';
-    er.innerHTML = '⚠ Não foi possível carregar a planilha.<br><br>Certifique-se de que a planilha está publicada na web (Arquivo → Compartilhar → Publicar na web → CSV).<br><br>Erro: ' + e.message + '<br><br>Enquanto isso, preencha os dados na aba <strong>Atualizar</strong> e cole na planilha.';
+    er.innerHTML = '⚠ Não foi possível carregar a planilha agora.<br><br>Isso acontece ao abrir o arquivo localmente. <strong>Suba na Vercel</strong> para funcionar de qualquer lugar sem este problema.<br><br>Por enquanto use a aba <strong>Atualizar</strong> para registrar os dados.';
+    populateWeeks(); renderDashboard(); return;
+  }
+  try {
+    allData = Papa.parse(txt.trim(), {header:true, skipEmptyLines:true}).data;
+    populateWeeks(); renderDashboard();
+  } catch(e) {
+    document.getElementById('dash-error').style.display='block';
+    document.getElementById('dash-error').textContent = 'Erro ao processar dados: ' + e.message;
   }
 }
 
