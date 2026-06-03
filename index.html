@@ -193,13 +193,13 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCnh5q9y3UR13B
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
-  {handle:'@pavanato2026',       dono:'Vinicius Pereira',  plat:'Instagram'},
-  {handle:'@nikolas.pavanato',   dono:'Julio Rodrigues',   plat:'Instagram'},
-  {handle:'@pavanatobr2026',     dono:'Julio Niglassi',    plat:'Instagram'},
-  {handle:'@pavanatotramontina', dono:'Marcus Tramontina', plat:'Instagram'},
-  {handle:'@jairbolsonaro0026',  dono:'Leticia',           plat:'Instagram'},
-  {handle:'Bianca',              dono:'Bianca',            plat:'Instagram'},
-  {handle:'@pavanatotramontina', dono:'Vinicius Pereira',  plat:'TikTok'},
+  {handle:'@pavanato2026',       dono:'Vinicius Pereira',  plat:'Instagram', totalSeg:508000},
+  {handle:'@nikolas.pavanato',   dono:'Julio Rodrigues',   plat:'Instagram', totalSeg:280000},
+  {handle:'@pavanatobr2026',     dono:'Julio Niglassi',    plat:'Instagram', totalSeg:14600},
+  {handle:'@pavanatotramontina', dono:'Marcus Tramontina', plat:'Instagram', totalSeg:1313},
+  {handle:'@jairbolsonaro0026',  dono:'Leticia',           plat:'Instagram', totalSeg:269000},
+  {handle:'@imparcialbra',       dono:'Bianca',            plat:'Instagram', totalSeg:25},
+  {handle:'@pavanatotramontina', dono:'Vinicius Pereira',  plat:'TikTok',    totalSeg:42500},
 ];
 const COLORS = ['#7c6af7','#e85d75','#3ecf8e','#f5a623','#e1306c','#64b5f6','#ff3b5c'];
 const GRID = 'rgba(255,255,255,0.05)';
@@ -296,40 +296,51 @@ function renderDashboard() {
       </div></div>`;
   }).join('');
 
-  // RANKING
+  // RANKING por engajamento proporcional ao total de seguidores
   const medals = ['🥇','🥈','🥉'];
   const ranked = rows.map(r => {
-    const v = parseFloat(r.views)||0;
     const it = parseFloat(r.interacoes)||0;
-    const seg = Math.abs(parseFloat(r.seguidores)||1);
-    const engRate = v > 0 ? (it/v*100) : 0;
-    const segScore = seg > 0 ? (it/seg) : 0;
-    const score = (engRate * 0.6) + (segScore * 0.4);
-    return {...r, engRate, segScore, score};
-  }).sort((a,b) => b.score - a.score);
+    const v  = parseFloat(r.views)||0;
+    // busca total de seguidores da conta correspondente
+    const contaInfo = CONTAS.find(c =>
+      c.handle === r.conta &&
+      (c.plat === (r.plataforma||'Instagram'))
+    );
+    const totalSeg = contaInfo ? contaInfo.totalSeg : 1;
+    const engRate  = totalSeg > 0 ? (it / totalSeg * 100) : 0;
+    const viewRate = v > 0 ? (it / v * 100) : 0;
+    return {...r, engRate, viewRate, totalSeg};
+  }).sort((a,b) => b.engRate - a.engRate);
 
   document.getElementById('ranking-list').innerHTML = `
     <div class="chart-card">
-      <div class="chart-title">proporção interações × seguidores (maior = melhor)</div>
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">
+        score = interações ÷ total de seguidores × 100
+      </div>
       ${ranked.map((r,i) => {
         const plat = r.plataforma||'Instagram';
         const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
-        const barW = Math.min(100, (r.score / (ranked[0].score||1)) * 100);
+        const barW = Math.min(100, (r.engRate / (ranked[0].engRate||1)) * 100);
         const medal = medals[i] || `#${i+1}`;
-        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:18px;width:28px;text-align:center">${medal}</div>
+        const color = COLORS[i%COLORS.length];
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
           <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
               <span style="font-size:13px;font-weight:700;color:var(--text)">${r.conta}</span>
               <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${plat}</span>
+              <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${r.dono}</span>
             </div>
-            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
-              <div style="height:100%;width:${barW}%;background:${COLORS[i%COLORS.length]};border-radius:4px;transition:width 0.5s"></div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+              <div style="height:100%;width:${barW}%;background:${color};border-radius:4px"></div>
+            </div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
+              ${fmt(parseFloat(r.interacoes)||0)} interações ÷ ${fmt(r.totalSeg)} seguidores
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${r.engRate.toFixed(1)}%</div>
-            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng. rate</div>
+            <div style="font-size:16px;font-weight:800;color:${color}">${r.engRate.toFixed(1)}%</div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng/seg</div>
           </div>
         </div>`;
       }).join('')}
