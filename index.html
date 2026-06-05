@@ -257,7 +257,7 @@ async function loadData() {
     }
 
     allData = allData.map(row => ({
-      semana: String(row.semana||''),
+      semana: String(row.semana||'').split('T')[0],
       conta: String(row.conta||''),
       dono: String(row.dono||''),
       plataforma: String(row.plataforma||'Instagram'),
@@ -268,7 +268,7 @@ async function loadData() {
     })).filter(r => r.semana);
 
     allPosts = allPosts.map(row => ({
-      data: String(row.data||row.semana||''),
+      data: String(row.data||row.semana||'').split('T')[0],
       conta: String(row.conta||''),
       dono: String(row.dono||''),
       plataforma: String(row.plataforma||'Instagram'),
