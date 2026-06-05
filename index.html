@@ -49,7 +49,21 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .trend-badge.down{background:rgba(232,93,117,0.12);color:var(--accent2)}
 .trend-badge.neutral{background:var(--surface2);color:var(--muted)}
 .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-@media(max-width:600px){.metrics-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){
+  .metrics-row{grid-template-columns:repeat(2,1fr)}
+  .top-bar{padding:0.8rem 1rem}
+  .tabs{gap:3px;overflow-x:auto;padding-bottom:2px;flex-wrap:nowrap;width:100%;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{font-size:11px;padding:5px 11px;white-space:nowrap;flex-shrink:0}
+  .page{padding:1rem;padding-bottom:4rem}
+  .totals-grid{grid-template-columns:repeat(2,1fr)}
+  .total-value{font-size:20px}
+  .charts-grid{grid-template-columns:1fr}
+  .form-fields{grid-template-columns:repeat(2,1fr)}
+  .acc-form-card{padding:1rem}
+  .section-header{margin-top:1.5rem}
+  .rel-conta-grid{grid-template-columns:repeat(2,1fr)!important}
+}
 .metric-pill{background:var(--surface2);border-radius:10px;padding:8px 10px}
 .metric-pill-label{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:3px}
 .metric-pill-val{font-size:14px;font-weight:700;color:var(--text)}
@@ -791,37 +805,89 @@ function renderRelatorio() {
   }
 
   // --- SAÚDE DAS CONTAS ---
-  document.getElementById('rel-saude').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem">
-    ${CONTAS.map((c, idx) => {
-      const weekData = weekRows.find(r => r.conta === c.handle && r.dono === c.dono) || weekRows.find(r => r.conta === c.handle);
-      const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === today).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
-      const postsSemana = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data >= (latestWeek||'')).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
-      const seg = weekData ? (parseFloat(weekData.seguidores) || 0) : null;
-      const engRate = weekData ? ((parseFloat(weekData.interacoes)||0) / c.totalSeg * 100) : null;
-      const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-      const color = COLORS[idx % COLORS.length];
-      const statusColor = postsHoje > 0 ? 'var(--green)' : 'var(--amber)';
-      const statusText = postsHoje > 0 ? `✓ postou ${postsHoje} hoje` : '○ sem posts hoje';
-      return `<div class="account-card" style="position:relative">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:13px;font-weight:700;color:var(--text)">${c.handle}</span>
-              <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor};font-family:'IBM Plex Mono',monospace">${c.plat}</span>
-            </div>
-            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:2px">${c.dono}</div>
+  document.getElementById('rel-saude').innerHTML = CONTAS.map((c, idx) => {
+    const weekData = weekRows.find(r => r.conta === c.handle && r.dono === c.dono) || weekRows.find(r => r.conta === c.handle);
+    const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === today).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
+    const postsSemana = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data >= (latestWeek||'')).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
+    const views    = weekData ? (parseFloat(weekData.views)      || 0) : null;
+    const inter    = weekData ? (parseFloat(weekData.interacoes) || 0) : null;
+    const seg      = weekData ? (parseFloat(weekData.seguidores) || 0) : null;
+    const conts    = weekData ? (weekData.conteudos || '—')            : '—';
+    const engRate  = (inter !== null && c.totalSeg > 0) ? (inter / c.totalSeg * 100) : null;
+    const viewEng  = (inter !== null && views > 0)      ? (inter / views * 100)      : null;
+    const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+    const color    = COLORS[idx % COLORS.length];
+    const statusColor = postsHoje > 0 ? 'var(--green)' : 'var(--amber)';
+    const statusText  = postsHoje > 0 ? `✓ ${postsHoje} hoje` : '○ sem posts hoje';
+    const segColor = seg === null ? 'var(--muted)' : seg >= 0 ? 'var(--green)' : 'var(--accent2)';
+    const semDados = views === null;
+    return `<div class="account-card">
+      <!-- cabeçalho -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:8px;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:14px;font-weight:800;color:var(--text)">${c.handle}</span>
+            <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:${platColor}22;color:${platColor};font-family:'IBM Plex Mono',monospace">${c.plat}</span>
           </div>
-          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${statusColor};background:${statusColor}18;padding:3px 10px;border-radius:20px;white-space:nowrap">${statusText}</span>
+          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:3px">${c.dono}</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-          <div class="metric-pill"><div class="metric-pill-label">posts semana</div><div class="metric-pill-val">${postsSemana || '—'}</div></div>
-          <div class="metric-pill"><div class="metric-pill-label">seguidores base</div><div class="metric-pill-val">${fmt(c.totalSeg)}</div></div>
-          <div class="metric-pill"><div class="metric-pill-label">eng/seg</div><div class="metric-pill-val" style="color:${color}">${engRate !== null ? engRate.toFixed(2)+'%' : '—'}</div></div>
+        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${statusColor};background:${statusColor}18;padding:3px 10px;border-radius:20px;white-space:nowrap;align-self:flex-start">${statusText}</span>
+      </div>
+
+      <!-- barra de engajamento -->
+      ${engRate !== null ? `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">engajamento/seguidores</span>
+          <span style="font-size:12px;font-weight:800;color:${color}">${engRate.toFixed(2)}%</span>
         </div>
-        ${seg !== null ? `<div style="margin-top:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:${seg>=0?'var(--green)':'var(--accent2)'}">seguidores semana: ${seg>=0?'+':''}${fmt(seg)}</div>` : ''}
-      </div>`;
-    }).join('')}
-  </div>`;
+        <div style="background:var(--surface2);border-radius:4px;height:5px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(engRate*5,100)}%;background:${color};border-radius:4px"></div>
+        </div>
+      </div>` : ''}
+
+      <!-- grid de métricas — todos os dados -->
+      <div class="rel-conta-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <div class="metric-pill">
+          <div class="metric-pill-label">visualizações</div>
+          <div class="metric-pill-val">${views !== null ? fmt(views) : '—'}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">interações</div>
+          <div class="metric-pill-val">${inter !== null ? fmt(inter) : '—'}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">seg. líquidos</div>
+          <div class="metric-pill-val" style="color:${segColor}">${seg !== null ? (seg >= 0 ? '+' : '') + fmt(seg) : '—'}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">conteúdos</div>
+          <div class="metric-pill-val">${conts}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">posts hoje</div>
+          <div class="metric-pill-val" style="color:${postsHoje>0?'var(--green)':'var(--muted)'}">${postsHoje || 0}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">posts semana</div>
+          <div class="metric-pill-val">${postsSemana || 0}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">eng/seg</div>
+          <div class="metric-pill-val" style="color:${color}">${engRate !== null ? engRate.toFixed(2)+'%' : '—'}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">eng/views</div>
+          <div class="metric-pill-val">${viewEng !== null ? viewEng.toFixed(2)+'%' : '—'}</div>
+        </div>
+        <div class="metric-pill">
+          <div class="metric-pill-label">base seguidores</div>
+          <div class="metric-pill-val">${fmt(c.totalSeg)}</div>
+        </div>
+      </div>
+      ${semDados ? `<div style="margin-top:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-align:center">sem dados semanais registrados</div>` : ''}
+    </div>`;
+  }).join('')
 }
 buildForm();
 buildPostsForm();
