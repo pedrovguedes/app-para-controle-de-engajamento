@@ -189,7 +189,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 <div class="toast" id="toast"></div>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCnh5q9y3UR13BNn3DvOgJoVwHK_CEE7F02hMkJMmtj4tfX4kWOUHT6VY0BLrzQtt-/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxlLouoJtXOH_k_vevNzb2m6mLLCIsFEHx5XOLAClPiiB5HYTjtk-CiHsmSSiXi2mZ0/exec';
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
@@ -199,6 +199,8 @@ const CONTAS = [
   {handle:'@pavanatotramontina', dono:'Marcus Tramontina', plat:'Instagram', totalSeg:1313},
   {handle:'@jairbolsonaro0026',  dono:'Leticia',           plat:'Instagram', totalSeg:269000},
   {handle:'@imparcialbra',       dono:'Bianca',            plat:'Instagram', totalSeg:25},
+  {handle:'@cutuquei',           dono:'Kika',              plat:'Instagram', totalSeg:32100},
+  {handle:'@cortespavanato',     dono:'Lorena',            plat:'Instagram', totalSeg:4},
   {handle:'@pavanatotramontina', dono:'Vinicius Pereira',  plat:'TikTok',    totalSeg:42500},
 ];
 const COLORS = ['#7c6af7','#e85d75','#3ecf8e','#f5a623','#e1306c','#64b5f6','#ff3b5c'];
@@ -301,12 +303,10 @@ function renderDashboard() {
   const ranked = rows.map(r => {
     const it = parseFloat(r.interacoes)||0;
     const v  = parseFloat(r.views)||0;
-    // busca total de seguidores da conta correspondente
-    const contaInfo = CONTAS.find(c =>
-      c.handle === r.conta &&
-      (c.plat === (r.plataforma||'Instagram'))
-    );
-    const totalSeg = contaInfo ? contaInfo.totalSeg : 1;
+    // cruza pelo handle + dono para diferenciar contas com mesmo @
+    const contaInfo = CONTAS.find(c => c.handle === r.conta && c.dono === r.dono)
+                   || CONTAS.find(c => c.handle === r.conta);
+    const totalSeg = (contaInfo && contaInfo.totalSeg) ? contaInfo.totalSeg : 1;
     const engRate  = totalSeg > 0 ? (it / totalSeg * 100) : 0;
     const viewRate = v > 0 ? (it / v * 100) : 0;
     return {...r, engRate, viewRate, totalSeg};
