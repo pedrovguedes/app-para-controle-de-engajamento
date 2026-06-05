@@ -239,15 +239,20 @@ function showTab(tab, el) {
 let allPosts = [];
 
 async function loadData() {
+  // mostra conteúdo imediatamente, carrega dados depois
+  document.getElementById('dash-loading').style.display='none';
+  document.getElementById('dash-content').style.display='block';
+  populateWeeks();
+  renderDashboard();
+
   try {
     const ctrl = new AbortController();
-    const id = setTimeout(() => ctrl.abort(), 10000);
-    const r = await fetch(APPS_SCRIPT_URL, {signal: ctrl.signal});
+    const id = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(APPS_SCRIPT_URL, {signal: ctrl.signal, redirect: 'follow'});
     clearTimeout(id);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const json = await r.json();
 
-    // suporta tanto array direto quanto {dados, posts}
     if (Array.isArray(json)) {
       allData = json;
       allPosts = [];
@@ -275,18 +280,11 @@ async function loadData() {
       posts: row.posts,
     })).filter(r => r.data);
 
-    document.getElementById('dash-loading').style.display='none';
-    document.getElementById('dash-content').style.display='block';
     populateWeeks();
     renderDashboard();
   } catch(e) {
-    document.getElementById('dash-loading').style.display='none';
-    document.getElementById('dash-content').style.display='block';
-    const er = document.getElementById('dash-error');
-    er.style.display='block';
-    er.innerHTML = '⚠ Erro ao carregar: ' + e.message + '<br><br>Verifique se o Apps Script está implantado como <strong>Qualquer pessoa</strong>.';
-    populateWeeks();
-    renderDashboard();
+    document.getElementById('dash-error').style.display='block';
+    document.getElementById('dash-error').innerHTML = '⚠ Não foi possível carregar os dados da planilha. Verifique a conexão e recarregue.<br><small>' + e.message + '</small>';
   }
 }
 
