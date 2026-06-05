@@ -104,6 +104,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .no-data{text-align:center;padding:3rem;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
 .stripe{height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--green),var(--amber))}
 .copy-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-top:1rem;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
+input[type=date]{color-scheme:dark}
 </style>
 </head>
 <body>
@@ -219,16 +220,28 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 <div id="page-relatorio" class="page">
   <div id="rel-loading" class="loading"><div class="spinner"></div><span>carregando dados...</span></div>
   <div id="rel-content" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--text)" id="rel-title">Relatório do dia</div>
-        <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-top:4px" id="rel-subtitle"></div>
+    <!-- SELETOR DE DATA DESTAQUE -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1.5rem">
+      <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">📅 selecionar dia para visualizar</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <input type="date" id="rel-date-picker"
+          style="background:var(--surface2);border:2px solid var(--accent);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;padding:10px 16px;border-radius:12px;outline:none;cursor:pointer;flex:1;min-width:160px"
+          onchange="onRelDateChange()">
+        <button onclick="setRelDateToday()"
+          style="font-size:12px;font-family:'IBM Plex Mono',monospace;padding:10px 18px;border-radius:12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:rgba(124,106,247,0.1);white-space:nowrap;transition:all 0.2s"
+          onmouseover="this.style.background='rgba(124,106,247,0.2)'" onmouseout="this.style.background='rgba(124,106,247,0.1)'">
+          hoje
+        </button>
+        <button onclick="setRelMode('semana')" id="btn-semana"
+          style="font-size:12px;font-family:'IBM Plex Mono',monospace;padding:10px 18px;border-radius:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;white-space:nowrap;transition:all 0.2s">
+          desde última atualização
+        </button>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="setRelMode('dia')" id="btn-dia" style="font-size:12px;font-family:IBM Plex Mono,monospace;padding:6px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:rgba(124,106,247,0.1)">hoje</button>
-        <button onclick="setRelMode('semana')" id="btn-semana" style="font-size:12px;font-family:IBM Plex Mono,monospace;padding:6px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent">desde última atualização</button>
-      </div>
+      <div id="rel-date-label" style="font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--text);margin-top:10px;font-weight:600"></div>
     </div>
+
+    <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px" id="rel-title">Relatório do dia</div>
+    <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-bottom:1.5rem" id="rel-subtitle"></div>
     <div class="totals-grid" id="rel-totals"></div>
     <div class="section-header"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title" id="rel-posts-title">📹 vídeos postados hoje</div></div>
     <div id="rel-posts-cards"></div>
@@ -661,18 +674,44 @@ function showToast(msg) {
 // Init
 
 let relMode = 'dia';
+let relSelectedDate = new Date().toISOString().split('T')[0];
+
+function setRelDateToday() {
+  relMode = 'dia';
+  relSelectedDate = new Date().toISOString().split('T')[0];
+  const picker = document.getElementById('rel-date-picker');
+  if (picker) picker.value = relSelectedDate;
+  updateRelModeButtons();
+  renderRelatorio();
+}
+
+function onRelDateChange() {
+  const picker = document.getElementById('rel-date-picker');
+  if (!picker.value) return;
+  relSelectedDate = picker.value;
+  relMode = 'dia';
+  updateRelModeButtons();
+  renderRelatorio();
+}
+
+function updateRelModeButtons() {
+  const btnSem = document.getElementById('btn-semana');
+  if (!btnSem) return;
+  if (relMode === 'semana') {
+    btnSem.style.borderColor = 'var(--accent)'; btnSem.style.color = 'var(--accent)'; btnSem.style.background = 'rgba(124,106,247,0.1)';
+  } else {
+    btnSem.style.borderColor = 'var(--border)'; btnSem.style.color = 'var(--muted)'; btnSem.style.background = 'transparent';
+  }
+}
 
 function setRelMode(mode) {
   relMode = mode;
-  const btnDia = document.getElementById('btn-dia');
-  const btnSem = document.getElementById('btn-semana');
   if (mode === 'dia') {
-    btnDia.style.borderColor = 'var(--accent)'; btnDia.style.color = 'var(--accent)'; btnDia.style.background = 'rgba(124,106,247,0.1)';
-    btnSem.style.borderColor = 'var(--border)'; btnSem.style.color = 'var(--muted)'; btnSem.style.background = 'transparent';
-  } else {
-    btnSem.style.borderColor = 'var(--accent)'; btnSem.style.color = 'var(--accent)'; btnSem.style.background = 'rgba(124,106,247,0.1)';
-    btnDia.style.borderColor = 'var(--border)'; btnDia.style.color = 'var(--muted)'; btnDia.style.background = 'transparent';
+    relSelectedDate = new Date().toISOString().split('T')[0];
+    const picker = document.getElementById('rel-date-picker');
+    if (picker) picker.value = relSelectedDate;
   }
+  updateRelModeButtons();
   renderRelatorio();
 }
 
@@ -682,20 +721,35 @@ function renderRelatorio() {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // Inicializa o date picker se ainda não tiver valor
+  const picker = document.getElementById('rel-date-picker');
+  if (picker && !picker.value) picker.value = relSelectedDate;
+
   // --- POSTS DO DIA / SEMANA ---
   let postRows = [];
+  const activeDate = relSelectedDate || today;
+  const isToday = activeDate === today;
+
   if (relMode === 'dia') {
-    postRows = allPosts.filter(r => r.data === today);
-    document.getElementById('rel-title').textContent = 'Relatório do dia';
-    document.getElementById('rel-subtitle').textContent = '// ' + today;
-    document.getElementById('rel-posts-title').textContent = '📹 vídeos postados hoje';
+    postRows = allPosts.filter(r => r.data === activeDate);
+    // Formata a data de forma legível
+    const [y, m, d] = activeDate.split('-');
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const dataFormatada = `${d} ${meses[parseInt(m)-1]} ${y}`;
+    document.getElementById('rel-title').textContent = isToday ? 'Relatório de hoje' : `Relatório de ${dataFormatada}`;
+    document.getElementById('rel-subtitle').textContent = '// ' + activeDate;
+    document.getElementById('rel-posts-title').textContent = `📹 vídeos postados em ${dataFormatada}`;
+    // Label destacado abaixo do picker
+    const lbl = document.getElementById('rel-date-label');
+    if (lbl) lbl.textContent = isToday ? '📍 Mostrando dados de hoje — ' + dataFormatada : '📍 Mostrando dados de ' + dataFormatada;
   } else {
-    // desde a última semana com dados
     const lastWeek = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse()[0] || today;
     postRows = allPosts.filter(r => r.data >= lastWeek);
     document.getElementById('rel-title').textContent = 'Relatório da semana';
     document.getElementById('rel-subtitle').textContent = '// desde ' + lastWeek;
     document.getElementById('rel-posts-title').textContent = '📹 vídeos postados desde a última atualização';
+    const lbl = document.getElementById('rel-date-label');
+    if (lbl) lbl.textContent = '📍 Mostrando acumulado desde ' + lastWeek;
   }
 
   const totalPostsHoje = postRows.reduce((s, r) => s + (parseInt(r.posts) || 0), 0);
@@ -807,7 +861,7 @@ function renderRelatorio() {
   // --- SAÚDE DAS CONTAS ---
   document.getElementById('rel-saude').innerHTML = CONTAS.map((c, idx) => {
     const weekData = weekRows.find(r => r.conta === c.handle && r.dono === c.dono) || weekRows.find(r => r.conta === c.handle);
-    const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === today).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
+    const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === activeDate).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
     const postsSemana = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data >= (latestWeek||'')).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
     const views    = weekData ? (parseFloat(weekData.views)      || 0) : null;
     const inter    = weekData ? (parseFloat(weekData.interacoes) || 0) : null;
@@ -818,7 +872,7 @@ function renderRelatorio() {
     const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
     const color    = COLORS[idx % COLORS.length];
     const statusColor = postsHoje > 0 ? 'var(--green)' : 'var(--amber)';
-    const statusText  = postsHoje > 0 ? `✓ ${postsHoje} hoje` : '○ sem posts hoje';
+    const statusText  = postsHoje > 0 ? `✓ ${postsHoje} ${isToday ? 'hoje' : 'neste dia'}` : `○ sem posts ${isToday ? 'hoje' : 'neste dia'}`;
     const segColor = seg === null ? 'var(--muted)' : seg >= 0 ? 'var(--green)' : 'var(--accent2)';
     const semDados = views === null;
     return `<div class="account-card">
@@ -865,7 +919,7 @@ function renderRelatorio() {
           <div class="metric-pill-val">${conts}</div>
         </div>
         <div class="metric-pill">
-          <div class="metric-pill-label">posts hoje</div>
+          <div class="metric-pill-label">${isToday ? 'posts hoje' : 'posts neste dia'}</div>
           <div class="metric-pill-val" style="color:${postsHoje>0?'var(--green)':'var(--muted)'}">${postsHoje || 0}</div>
         </div>
         <div class="metric-pill">
