@@ -206,7 +206,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 <div class="toast" id="toast"></div>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxlLouoJtXOH_k_vevNzb2m6mLLCIsFEHx5XOLAClPiiB5HYTjtk-CiHsmSSiXi2mZ0/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMpseLF68U6nCAFjHsCETBCSumu2l66kZNMJ-I4Vw94Q2PClm1m8Zg-O4mWhBz0jFX/exec';
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
@@ -233,7 +233,10 @@ function showTab(tab, el) {
   document.getElementById('page-'+tab).classList.add('active');
   el.classList.add('active');
   if (tab==='historico') renderHistorico();
+  if (tab==='posts') renderPostsHistory();
 }
+
+let allPosts = [];
 
 async function loadData() {
   try {
@@ -243,16 +246,35 @@ async function loadData() {
     clearTimeout(id);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const json = await r.json();
-    if (!Array.isArray(json)) throw new Error('Formato inválido');
-    allData = json.map(row => ({
-      semana: String(row.semana || ''),
-      conta: String(row.conta || ''),
-      dono: String(row.dono || ''),
+
+    // suporta tanto array direto quanto {dados, posts}
+    if (Array.isArray(json)) {
+      allData = json;
+      allPosts = [];
+    } else {
+      allData = Array.isArray(json.dados) ? json.dados : [];
+      allPosts = Array.isArray(json.posts) ? json.posts : [];
+    }
+
+    allData = allData.map(row => ({
+      semana: String(row.semana||''),
+      conta: String(row.conta||''),
+      dono: String(row.dono||''),
+      plataforma: String(row.plataforma||'Instagram'),
       views: row.views,
       interacoes: row.interacoes,
       seguidores: row.seguidores,
       conteudos: row.conteudos,
     })).filter(r => r.semana);
+
+    allPosts = allPosts.map(row => ({
+      data: String(row.data||row.semana||''),
+      conta: String(row.conta||''),
+      dono: String(row.dono||''),
+      plataforma: String(row.plataforma||'Instagram'),
+      posts: row.posts,
+    })).filter(r => r.data);
+
     document.getElementById('dash-loading').style.display='none';
     document.getElementById('dash-content').style.display='block';
     populateWeeks();
@@ -262,7 +284,7 @@ async function loadData() {
     document.getElementById('dash-content').style.display='block';
     const er = document.getElementById('dash-error');
     er.style.display='block';
-    er.innerHTML = '⚠ Erro ao carregar dados: ' + e.message + '<br><br>Verifique se o Apps Script está implantado como "Qualquer pessoa" e tente recarregar.';
+    er.innerHTML = '⚠ Erro ao carregar: ' + e.message + '<br><br>Verifique se o Apps Script está implantado como <strong>Qualquer pessoa</strong>.';
     populateWeeks();
     renderDashboard();
   }
@@ -455,16 +477,15 @@ function savePosts() {
 }
 
 function renderPostsHistory() {
-  const postsData = allData.filter(r => r.posts !== undefined && r.posts !== '');
   document.getElementById('posts-history-loading').style.display = 'none';
   document.getElementById('posts-history').style.display = 'block';
-  if (!postsData.length) {
+  if (!allPosts.length) {
     document.getElementById('posts-history').innerHTML = '<div class="no-data">Nenhum registro de posts ainda.<br>Use o formulário acima para registrar.</div>';
     return;
   }
-  const days = [...new Set(postsData.map(r=>r.data||r.semana))].sort().reverse();
+  const days = [...new Set(allPosts.map(r=>r.data))].sort().reverse();
   document.getElementById('posts-history').innerHTML = days.map(day => {
-    const dayRows = postsData.filter(r=>(r.data||r.semana)===day);
+    const dayRows = allPosts.filter(r=>r.data===day);
     const total = dayRows.reduce((s,r)=>s+(parseInt(r.posts)||0),0);
     return `<div class="chart-card" style="margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -475,7 +496,7 @@ function renderPostsHistory() {
         const posts = parseInt(r.posts)||0;
         const plat = r.plataforma||'Instagram';
         const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
-        const bars = Array(posts).fill('▮').join(' ') || '—';
+        const bars = Array(Math.min(posts,10)).fill('▮').join(' ') || '—';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
           <div>
             <span style="font-size:13px;color:var(--text)">${r.conta}</span>
@@ -536,6 +557,7 @@ function showToast(msg) {
 }
 
 buildForm();
+buildPostsForm();
 loadData();
 </script>
 </body>
