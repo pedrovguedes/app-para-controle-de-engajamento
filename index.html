@@ -160,7 +160,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   <div id="posts-history" style="display:none"></div>
 </div>
 
-
+<!-- ATUALIZAR -->
 <div id="page-update" class="page">
   <div class="form-header"><h2>Atualizar dados</h2><p>// preencha os dados da semana e salve na planilha</p></div>
   <div class="instrucoes-card">
@@ -226,22 +226,20 @@ const TICK = '#6b6b80';
 const MONO = 'IBM Plex Mono';
 let allData = [];
 let charts = {};
-
-function showTab(tab, el) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('page-'+tab).classList.add('active');
-  el.classList.add('active');
-  if (tab==='historico') renderHistorico();
-  if (tab==='posts') renderPostsHistory();
-}
-
 let allPosts = [];
 
+function showTab(tab, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  el.classList.add('active');
+  if (tab === 'historico') renderHistorico();
+  if (tab === 'posts') renderPostsHistory();
+}
+
 async function loadData() {
-  // mostra conteúdo imediatamente, carrega dados depois
-  document.getElementById('dash-loading').style.display='none';
-  document.getElementById('dash-content').style.display='block';
+  document.getElementById('dash-loading').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
   populateWeeks();
   renderDashboard();
 
@@ -262,10 +260,10 @@ async function loadData() {
     }
 
     allData = allData.map(row => ({
-      semana: String(row.semana||'').split('T')[0],
-      conta: String(row.conta||''),
-      dono: String(row.dono||''),
-      plataforma: String(row.plataforma||'Instagram'),
+      semana: String(row.semana || '').split('T')[0],
+      conta: String(row.conta || ''),
+      dono: String(row.dono || ''),
+      plataforma: String(row.plataforma || 'Instagram'),
       views: row.views,
       interacoes: row.interacoes,
       seguidores: row.seguidores,
@@ -273,51 +271,54 @@ async function loadData() {
     })).filter(r => r.semana);
 
     allPosts = allPosts.map(row => ({
-      data: String(row.data||row.semana||'').split('T')[0],
-      conta: String(row.conta||''),
-      dono: String(row.dono||''),
-      plataforma: String(row.plataforma||'Instagram'),
+      data: String(row.data || row.semana || '').split('T')[0],
+      conta: String(row.conta || ''),
+      dono: String(row.dono || ''),
+      plataforma: String(row.plataforma || 'Instagram'),
       posts: row.posts,
     })).filter(r => r.data);
 
     populateWeeks();
     renderDashboard();
   } catch(e) {
-    document.getElementById('dash-error').style.display='block';
+    document.getElementById('dash-error').style.display = 'block';
     document.getElementById('dash-error').innerHTML = '⚠ Não foi possível carregar os dados da planilha. Verifique a conexão e recarregue.<br><small>' + e.message + '</small>';
   }
 }
 
 function populateWeeks() {
-  const weeks = [...new Set(allData.map(r=>r.semana))].filter(Boolean).sort().reverse();
+  const weeks = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse();
   const sel = document.getElementById('week-select');
-  sel.innerHTML = weeks.length ? weeks.map(w=>`<option value="${w}">${w}</option>`).join('') : '<option value="">Sem dados ainda</option>';
+  sel.innerHTML = weeks.length
+    ? weeks.map(w => `<option value="${w}">${w}</option>`).join('')
+    : '<option value="">Sem dados ainda</option>';
 }
 
 function renderDashboard() {
   const week = document.getElementById('week-select').value;
-  const rows = allData.filter(r=>r.semana===week);
+  const rows = allData.filter(r => r.semana === week);
   if (!rows.length) {
     document.getElementById('accounts-list').innerHTML = '<div class="no-data">Nenhum dado para esta semana.<br>Use a aba <strong>Atualizar</strong>.</div>';
     return;
   }
-  const tv = rows.reduce((s,r)=>s+(parseFloat(r.views)||0),0);
-  const ti = rows.reduce((s,r)=>s+(parseFloat(r.interacoes)||0),0);
-  const ts = rows.reduce((s,r)=>s+(parseFloat(r.seguidores)||0),0);
+  const tv = rows.reduce((s, r) => s + (parseFloat(r.views) || 0), 0);
+  const ti = rows.reduce((s, r) => s + (parseFloat(r.interacoes) || 0), 0);
+  const ts = rows.reduce((s, r) => s + (parseFloat(r.seguidores) || 0), 0);
   document.getElementById('dash-period').textContent = '// semana de ' + week;
   document.getElementById('dash-totals').innerHTML = `
     <div class="total-card"><div class="total-label">total visualizações</div><div class="total-value">${fmt(tv)}</div><div class="total-sub">todas as contas</div></div>
     <div class="total-card green"><div class="total-label">total interações</div><div class="total-value">${fmt(ti)}</div><div class="total-sub">likes + comentários</div></div>
-    <div class="total-card amber"><div class="total-label">novos seguidores</div><div class="total-value">${ts>=0?'+':''}${fmt(ts)}</div><div class="total-sub">líquido combinado</div></div>
+    <div class="total-card amber"><div class="total-label">novos seguidores</div><div class="total-value">${ts >= 0 ? '+' : ''}${fmt(ts)}</div><div class="total-sub">líquido combinado</div></div>
     <div class="total-card red"><div class="total-label">contas ativas</div><div class="total-value">${rows.length}</div><div class="total-sub">Instagram</div></div>`;
-  document.getElementById('accounts-list').innerHTML = rows.map((r,i)=>{
-    const seg=parseFloat(r.seguidores)||0;
-    const tc=seg>0?'up':seg<0?'down':'neutral';
-    const ti=seg>0?'▲':seg<0?'▼':'=';
-    const v=parseFloat(r.views)||0, it=parseFloat(r.interacoes)||0;
-    const plat=r.plataforma||'Instagram';
-    const platColor=plat==='TikTok'?'#ff3b5c':'#e1306c';
-    const platBg=plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
+
+  document.getElementById('accounts-list').innerHTML = rows.map((r, i) => {
+    const seg = parseFloat(r.seguidores) || 0;
+    const tc = seg > 0 ? 'up' : seg < 0 ? 'down' : 'neutral';
+    const ti = seg > 0 ? '▲' : seg < 0 ? '▼' : '=';
+    const v = parseFloat(r.views) || 0, it = parseFloat(r.interacoes) || 0;
+    const plat = r.plataforma || 'Instagram';
+    const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+    const platBg = plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)';
     return `<div class="account-card">
       <div class="acc-header"><div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -326,40 +327,38 @@ function renderDashboard() {
         </div>
         <div class="acc-owner">${r.dono}</div>
       </div>
-      <div class="trend-badge ${tc}">${ti} ${seg>=0?'+':''}${fmt(seg)}</div></div>
+      <div class="trend-badge ${tc}">${ti} ${seg >= 0 ? '+' : ''}${fmt(seg)}</div></div>
       <div class="metrics-row">
         <div class="metric-pill"><div class="metric-pill-label">Visualizações</div><div class="metric-pill-val">${fmt(v)}</div></div>
         <div class="metric-pill"><div class="metric-pill-label">Interações</div><div class="metric-pill-val">${fmt(it)}</div></div>
-        <div class="metric-pill"><div class="metric-pill-label">Seg. líquidos</div><div class="metric-pill-val ${seg<0?'neg':''}">${seg>=0?'+':''}${fmt(seg)}</div></div>
-        <div class="metric-pill"><div class="metric-pill-label">Conteúdos</div><div class="metric-pill-val">${r.conteudos||'—'}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Seg. líquidos</div><div class="metric-pill-val ${seg < 0 ? 'neg' : ''}">${seg >= 0 ? '+' : ''}${fmt(seg)}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Conteúdos</div><div class="metric-pill-val">${r.conteudos || '—'}</div></div>
       </div></div>`;
   }).join('');
 
-  // RANKING por engajamento proporcional ao total de seguidores
+  // RANKING por engajamento
   const medals = ['🥇','🥈','🥉'];
   const ranked = rows.map(r => {
-    const it = parseFloat(r.interacoes)||0;
-    const v  = parseFloat(r.views)||0;
-    // cruza pelo handle + dono para diferenciar contas com mesmo @
+    const it = parseFloat(r.interacoes) || 0;
+    const v  = parseFloat(r.views) || 0;
     const contaInfo = CONTAS.find(c => c.handle === r.conta && c.dono === r.dono)
                    || CONTAS.find(c => c.handle === r.conta);
     const totalSeg = (contaInfo && contaInfo.totalSeg) ? contaInfo.totalSeg : 1;
     const engRate  = totalSeg > 0 ? (it / totalSeg * 100) : 0;
-    const viewRate = v > 0 ? (it / v * 100) : 0;
-    return {...r, engRate, viewRate, totalSeg};
-  }).sort((a,b) => b.engRate - a.engRate);
+    return {...r, engRate, totalSeg};
+  }).sort((a, b) => b.engRate - a.engRate);
 
   document.getElementById('ranking-list').innerHTML = `
     <div class="chart-card">
       <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">
         score = interações ÷ total de seguidores × 100
       </div>
-      ${ranked.map((r,i) => {
-        const plat = r.plataforma||'Instagram';
-        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
-        const barW = Math.min(100, (r.engRate / (ranked[0].engRate||1)) * 100);
+      ${ranked.map((r, i) => {
+        const plat = r.plataforma || 'Instagram';
+        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+        const barW = Math.min(100, (r.engRate / (ranked[0].engRate || 1)) * 100);
         const medal = medals[i] || `#${i+1}`;
-        const color = COLORS[i%COLORS.length];
+        const color = COLORS[i % COLORS.length];
         return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
           <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
           <div style="flex:1;min-width:0">
@@ -372,7 +371,7 @@ function renderDashboard() {
               <div style="height:100%;width:${barW}%;background:${color};border-radius:4px"></div>
             </div>
             <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
-              ${fmt(parseFloat(r.interacoes)||0)} interações ÷ ${fmt(r.totalSeg)} seguidores
+              ${fmt(parseFloat(r.interacoes) || 0)} interações ÷ ${fmt(r.totalSeg)} seguidores
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
@@ -382,14 +381,15 @@ function renderDashboard() {
         </div>`;
       }).join('')}
     </div>`;
-  const labels=rows.map(r=>r.dono||r.conta);
-  const vs=rows.map(r=>parseFloat(r.views)||0);
-  const is=rows.map(r=>parseFloat(r.interacoes)||0);
-  const ss=rows.map(r=>parseFloat(r.seguidores)||0);
-  const er=vs.map((v,i)=>v>0?parseFloat((is[i]/v*100).toFixed(2)):0);
-  const cl=rows.map((_,i)=>COLORS[i%COLORS.length]);
-  document.getElementById('legend-views').innerHTML=rows.map((r,i)=>
-    `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${r.dono||r.conta}</div>`).join('');
+
+  const labels = rows.map(r => r.dono || r.conta);
+  const vs = rows.map(r => parseFloat(r.views) || 0);
+  const is = rows.map(r => parseFloat(r.interacoes) || 0);
+  const ss = rows.map(r => parseFloat(r.seguidores) || 0);
+  const er = vs.map((v, i) => v > 0 ? parseFloat((is[i] / v * 100).toFixed(2)) : 0);
+  const cl = rows.map((_, i) => COLORS[i % COLORS.length]);
+  document.getElementById('legend-views').innerHTML = rows.map((r, i) =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${r.dono || r.conta}</div>`).join('');
   const bo = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10},maxRotation:30}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
   mk('cViews','bar',labels,[{data:vs,backgroundColor:cl,borderRadius:6,borderSkipped:false}],bo);
   mk('cInt','bar',labels,[{data:is,backgroundColor:cl,borderRadius:6,borderSkipped:false}],bo);
@@ -398,23 +398,33 @@ function renderDashboard() {
 }
 
 function renderHistorico() {
-  document.getElementById('hist-loading').style.display='none';
-  document.getElementById('hist-content').style.display='block';
+  document.getElementById('hist-loading').style.display = 'none';
+  document.getElementById('hist-content').style.display = 'block';
   if (!allData.length) {
-    document.getElementById('hist-table').innerHTML='<div class="no-data">Nenhum dado ainda.</div>';
+    document.getElementById('hist-table').innerHTML = '<div class="no-data">Nenhum dado ainda.</div>';
     return;
   }
-  const weeks=[...new Set(allData.map(r=>r.semana))].filter(Boolean).sort();
-  const contas=[...new Set(allData.map(r=>r.conta))];
-  const cl=contas.map((_,i)=>COLORS[i%COLORS.length]);
-  document.getElementById('legend-hist').innerHTML=contas.map((c,i)=>
+  const weeks = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort();
+  const contas = [...new Set(allData.map(r => r.conta))];
+  const cl = contas.map((_, i) => COLORS[i % COLORS.length]);
+  document.getElementById('legend-hist').innerHTML = contas.map((c, i) =>
     `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${c}</div>`).join('');
-  const bo={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
-  const vds=contas.map((c,i)=>({label:c,data:weeks.map(w=>{const r=allData.find(d=>d.semana===w&&d.conta===c);return r?parseFloat(r.views)||0:null;}),borderColor:cl[i],backgroundColor:cl[i]+'22',pointBackgroundColor:cl[i],pointRadius:4,fill:false,tension:0.3,borderWidth:2,spanGaps:true}));
-  const sds=contas.map((c,i)=>({label:c,data:weeks.map(w=>{const r=allData.find(d=>d.semana===w&&d.conta===c);return r?parseFloat(r.seguidores)||0:null;}),borderColor:cl[i],backgroundColor:cl[i]+'22',pointBackgroundColor:cl[i],pointRadius:4,fill:false,tension:0.3,borderWidth:2,spanGaps:true}));
-  mk('cHistViews','line',weeks,vds,bo);
-  mk('cHistSeg','line',weeks,sds,bo);
-  document.getElementById('hist-table').innerHTML=`
+  const bo = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
+  const vds = contas.map((c, i) => ({
+    label: c,
+    data: weeks.map(w => { const r = allData.find(d => d.semana === w && d.conta === c); return r ? parseFloat(r.views) || 0 : null; }),
+    borderColor: cl[i], backgroundColor: cl[i] + '22', pointBackgroundColor: cl[i],
+    pointRadius: 4, fill: false, tension: 0.3, borderWidth: 2, spanGaps: true
+  }));
+  const sds = contas.map((c, i) => ({
+    label: c,
+    data: weeks.map(w => { const r = allData.find(d => d.semana === w && d.conta === c); return r ? parseFloat(r.seguidores) || 0 : null; }),
+    borderColor: cl[i], backgroundColor: cl[i] + '22', pointBackgroundColor: cl[i],
+    pointRadius: 4, fill: false, tension: 0.3, borderWidth: 2, spanGaps: true
+  }));
+  mk('cHistViews', 'line', weeks, vds, bo);
+  mk('cHistSeg', 'line', weeks, sds, bo);
+  document.getElementById('hist-table').innerHTML = `
     <div class="chart-card"><div class="chart-title">todos os registros</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">
       <thead><tr style="border-bottom:1px solid var(--border)">
@@ -424,22 +434,22 @@ function renderHistorico() {
         <th style="text-align:right;padding:8px 10px">interações</th>
         <th style="text-align:right;padding:8px 10px">seguidores</th>
       </tr></thead>
-      <tbody>${[...allData].reverse().map(r=>`
+      <tbody>${[...allData].reverse().map(r => `
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 10px;color:var(--text)">${r.semana}</td>
           <td style="padding:8px 10px">${r.conta}</td>
-          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.views)||0)}</td>
-          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.interacoes)||0)}</td>
-          <td style="padding:8px 10px;text-align:right;color:${(parseFloat(r.seguidores)||0)<0?'var(--accent2)':'var(--green)'}">${(parseFloat(r.seguidores)||0)>=0?'+':''}${fmt(parseFloat(r.seguidores)||0)}</td>
+          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.views) || 0)}</td>
+          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.interacoes) || 0)}</td>
+          <td style="padding:8px 10px;text-align:right;color:${(parseFloat(r.seguidores) || 0) < 0 ? 'var(--accent2)' : 'var(--green)'}">${(parseFloat(r.seguidores) || 0) >= 0 ? '+' : ''}${fmt(parseFloat(r.seguidores) || 0)}</td>
         </tr>`).join('')}</tbody>
     </table></div></div>`;
 }
 
 function buildPostsForm() {
   document.getElementById('posts-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('posts-form-accounts').innerHTML = CONTAS.map((c,i) => {
-    const platColor = c.plat==='TikTok'?'#ff3b5c':'#e1306c';
-    const platBg = c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
+  document.getElementById('posts-form-accounts').innerHTML = CONTAS.map((c, i) => {
+    const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+    const platBg = c.plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)';
     return `<div class="acc-form-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
       <div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -459,19 +469,21 @@ function buildPostsForm() {
 
 function changePost(id, delta) {
   const el = document.getElementById(id);
-  const val = Math.max(0, (parseInt(el.textContent)||0) + delta);
+  const val = Math.max(0, (parseInt(el.textContent) || 0) + delta);
   el.textContent = val;
 }
 
 function savePosts() {
   const date = document.getElementById('posts-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-  const lines = CONTAS.map((c,i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('p'+i).textContent||0}`);
+  const lines = CONTAS.map((c, i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('p' + i).textContent || 0}`);
   const csv = lines.join('\n');
   const full = 'data,conta,dono,plataforma,posts\n' + csv;
   document.getElementById('posts-copy-box').textContent = full;
   document.getElementById('posts-copy-result').style.display = 'block';
-  navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na aba posts da planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
+  navigator.clipboard.writeText(csv)
+    .then(() => showToast('✓ Copiado! Cole na aba posts da planilha.'))
+    .catch(() => showToast('Copie o texto abaixo manualmente.'));
 }
 
 function renderPostsHistory() {
@@ -481,20 +493,20 @@ function renderPostsHistory() {
     document.getElementById('posts-history').innerHTML = '<div class="no-data">Nenhum registro de posts ainda.<br>Use o formulário acima para registrar.</div>';
     return;
   }
-  const days = [...new Set(allPosts.map(r=>r.data))].sort().reverse();
+  const days = [...new Set(allPosts.map(r => r.data))].sort().reverse();
   document.getElementById('posts-history').innerHTML = days.map(day => {
-    const dayRows = allPosts.filter(r=>r.data===day);
-    const total = dayRows.reduce((s,r)=>s+(parseInt(r.posts)||0),0);
+    const dayRows = allPosts.filter(r => r.data === day);
+    const total = dayRows.reduce((s, r) => s + (parseInt(r.posts) || 0), 0);
     return `<div class="chart-card" style="margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${day}</div>
         <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${total} posts total</div>
       </div>
       ${dayRows.map(r => {
-        const posts = parseInt(r.posts)||0;
-        const plat = r.plataforma||'Instagram';
-        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
-        const bars = Array(Math.min(posts,10)).fill('▮').join(' ') || '—';
+        const posts = parseInt(r.posts) || 0;
+        const plat = r.plataforma || 'Instagram';
+        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+        const bars = Array(Math.min(posts, 10)).fill('▮').join(' ') || '—';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
           <div>
             <span style="font-size:13px;color:var(--text)">${r.conta}</span>
@@ -506,12 +518,14 @@ function renderPostsHistory() {
     </div>`;
   }).join('');
 }
+
+function buildForm() {
   document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('form-accounts').innerHTML = CONTAS.map((c,i)=>`
+  document.getElementById('form-accounts').innerHTML = CONTAS.map((c, i) => `
     <div class="acc-form-card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div class="acc-form-name">${c.handle}</div>
-        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)'};color:${c.plat==='TikTok'?'#ff3b5c':'#e1306c'}">${c.plat}</span>
+        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${c.plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)'};color:${c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c'}">${c.plat}</span>
       </div>
       <div class="acc-form-owner">${c.dono}</div>
       <div class="form-fields">
@@ -526,24 +540,26 @@ function renderPostsHistory() {
 function saveWeek() {
   const date = document.getElementById('form-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-  const lines = CONTAS.map((c,i)=>`${date},${c.handle},${c.dono},${c.plat},${document.getElementById('v'+i).value||0},${document.getElementById('i'+i).value||0},${document.getElementById('s'+i).value||0},${document.getElementById('c'+i).value||0}`);
+  const lines = CONTAS.map((c, i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('v' + i).value || 0},${document.getElementById('i' + i).value || 0},${document.getElementById('s' + i).value || 0},${document.getElementById('c' + i).value || 0}`);
   const csv = lines.join('\n');
   const full = 'semana,conta,dono,plataforma,views,interacoes,seguidores,conteudos\n' + csv;
   document.getElementById('copy-box').textContent = full;
   document.getElementById('copy-result').style.display = 'block';
-  navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
+  navigator.clipboard.writeText(csv)
+    .then(() => showToast('✓ Copiado! Cole na planilha.'))
+    .catch(() => showToast('Copie o texto abaixo manualmente.'));
 }
 
 function mk(id, type, labels, datasets, options) {
   if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart(document.getElementById(id), {type, data:{labels, datasets}, options});
+  charts[id] = new Chart(document.getElementById(id), {type, data: {labels, datasets}, options});
 }
 
 function fmt(n) {
   const abs = Math.abs(n);
   const sign = n < 0 ? '-' : '';
-  if (abs >= 1000000) return sign + (abs/1000000).toFixed(1) + 'mi';
-  if (abs >= 1000) return sign + (abs/1000).toFixed(1) + 'mil';
+  if (abs >= 1000000) return sign + (abs / 1000000).toFixed(1) + 'mi';
+  if (abs >= 1000) return sign + (abs / 1000).toFixed(1) + 'mil';
   return Math.round(n).toLocaleString('pt-BR');
 }
 
@@ -551,9 +567,10 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3500);
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// Init
 buildForm();
 buildPostsForm();
 loadData();
