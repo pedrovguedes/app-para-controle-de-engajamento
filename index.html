@@ -98,6 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   <div class="logo">pavanato<span>.</span>report</div>
   <div class="tabs">
     <button class="tab active" onclick="showTab('dashboard',this)">dashboard</button>
+    <button class="tab" onclick="showTab('posts',this)">posts diários</button>
     <button class="tab" onclick="showTab('update',this)">atualizar</button>
     <button class="tab" onclick="showTab('historico',this)">histórico</button>
   </div>
@@ -143,7 +144,23 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   </div>
 </div>
 
-<!-- ATUALIZAR -->
+<!-- POSTS DIÁRIOS -->
+<div id="page-posts" class="page">
+  <div class="form-header"><h2>Posts diários</h2><p>// quantos vídeos cada conta publicou por dia</p></div>
+  <div class="form-week"><label>Data:</label><input type="date" id="posts-date"></div>
+  <div id="posts-form-accounts"></div>
+  <button class="save-btn" onclick="savePosts()">Copiar dados para planilha ↗</button>
+  <div id="posts-copy-result" style="display:none">
+    <div style="margin-top:1rem;font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ Copiado! Cole na aba <strong>posts</strong> da planilha.</div>
+    <div class="copy-box" id="posts-copy-box"></div>
+  </div>
+
+  <div class="section-header" style="margin-top:2rem"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title">histórico de posts</div></div>
+  <div id="posts-history-loading" class="loading" style="min-height:150px"><div class="spinner"></div><span>carregando...</span></div>
+  <div id="posts-history" style="display:none"></div>
+</div>
+
+
 <div id="page-update" class="page">
   <div class="form-header"><h2>Atualizar dados</h2><p>// preencha os dados da semana e salve na planilha</p></div>
   <div class="instrucoes-card">
@@ -398,7 +415,78 @@ function renderHistorico() {
     </table></div></div>`;
 }
 
-function buildForm() {
+function buildPostsForm() {
+  document.getElementById('posts-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('posts-form-accounts').innerHTML = CONTAS.map((c,i) => {
+    const platColor = c.plat==='TikTok'?'#ff3b5c':'#e1306c';
+    const platBg = c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
+    return `<div class="acc-form-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="acc-form-name">${c.handle}</div>
+          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platBg};color:${platColor}">${c.plat}</span>
+        </div>
+        <div class="acc-form-owner">${c.dono}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button onclick="changePost('p${i}',-1)" style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <span id="p${i}" style="font-size:22px;font-weight:800;color:var(--text);min-width:28px;text-align:center">0</span>
+        <button onclick="changePost('p${i}',1)" style="width:32px;height:32px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changePost(id, delta) {
+  const el = document.getElementById(id);
+  const val = Math.max(0, (parseInt(el.textContent)||0) + delta);
+  el.textContent = val;
+}
+
+function savePosts() {
+  const date = document.getElementById('posts-date').value;
+  if (!date) { showToast('Escolha uma data!'); return; }
+  const lines = CONTAS.map((c,i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('p'+i).textContent||0}`);
+  const csv = lines.join('\n');
+  const full = 'data,conta,dono,plataforma,posts\n' + csv;
+  document.getElementById('posts-copy-box').textContent = full;
+  document.getElementById('posts-copy-result').style.display = 'block';
+  navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na aba posts da planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
+}
+
+function renderPostsHistory() {
+  const postsData = allData.filter(r => r.posts !== undefined && r.posts !== '');
+  document.getElementById('posts-history-loading').style.display = 'none';
+  document.getElementById('posts-history').style.display = 'block';
+  if (!postsData.length) {
+    document.getElementById('posts-history').innerHTML = '<div class="no-data">Nenhum registro de posts ainda.<br>Use o formulário acima para registrar.</div>';
+    return;
+  }
+  const days = [...new Set(postsData.map(r=>r.data||r.semana))].sort().reverse();
+  document.getElementById('posts-history').innerHTML = days.map(day => {
+    const dayRows = postsData.filter(r=>(r.data||r.semana)===day);
+    const total = dayRows.reduce((s,r)=>s+(parseInt(r.posts)||0),0);
+    return `<div class="chart-card" style="margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div style="font-size:14px;font-weight:700;color:var(--text)">${day}</div>
+        <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${total} posts total</div>
+      </div>
+      ${dayRows.map(r => {
+        const posts = parseInt(r.posts)||0;
+        const plat = r.plataforma||'Instagram';
+        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
+        const bars = Array(posts).fill('▮').join(' ') || '—';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <span style="font-size:13px;color:var(--text)">${r.conta}</span>
+            <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor};margin-left:6px">${plat}</span>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)">${bars} <span style="color:var(--muted)">(${posts})</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
   document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('form-accounts').innerHTML = CONTAS.map((c,i)=>`
     <div class="acc-form-card">
