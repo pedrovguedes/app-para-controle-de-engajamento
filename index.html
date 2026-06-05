@@ -98,6 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   <div class="logo">pavanato<span>.</span>report</div>
   <div class="tabs">
     <button class="tab active" onclick="showTab('dashboard',this)">dashboard</button>
+    <button class="tab" onclick="showTab('relatorio',this)">📊 relatório</button>
     <button class="tab" onclick="showTab('posts',this)">posts diários</button>
     <button class="tab" onclick="showTab('update',this)">atualizar</button>
     <button class="tab" onclick="showTab('historico',this)">histórico</button>
@@ -149,11 +150,8 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   <div class="form-header"><h2>Posts diários</h2><p>// quantos vídeos cada conta publicou por dia</p></div>
   <div class="form-week"><label>Data:</label><input type="date" id="posts-date"></div>
   <div id="posts-form-accounts"></div>
-  <button class="save-btn" onclick="savePosts()">Copiar dados para planilha ↗</button>
-  <div id="posts-copy-result" style="display:none">
-    <div style="margin-top:1rem;font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ Copiado! Cole na aba <strong>posts</strong> da planilha.</div>
-    <div class="copy-box" id="posts-copy-box"></div>
-  </div>
+  <button class="save-btn" id="posts-save-btn" onclick="savePosts()">Salvar na planilha ↗</button>
+  <div id="posts-status" style="display:none;margin-top:1rem;font-size:13px;font-family:'IBM Plex Mono',monospace;text-align:center;padding:12px;border-radius:10px"></div>
 
   <div class="section-header" style="margin-top:2rem"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title">histórico de posts</div></div>
   <div id="posts-history-loading" class="loading" style="min-height:150px"><div class="spinner"></div><span>carregando...</span></div>
@@ -203,10 +201,34 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
   </div>
 </div>
 
+<!-- RELATÓRIO -->
+<div id="page-relatorio" class="page">
+  <div id="rel-loading" class="loading"><div class="spinner"></div><span>carregando dados...</span></div>
+  <div id="rel-content" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--text)" id="rel-title">Relatório do dia</div>
+        <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-top:4px" id="rel-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="setRelMode('dia')" id="btn-dia" style="font-size:12px;font-family:IBM Plex Mono,monospace;padding:6px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:rgba(124,106,247,0.1)">hoje</button>
+        <button onclick="setRelMode('semana')" id="btn-semana" style="font-size:12px;font-family:IBM Plex Mono,monospace;padding:6px 16px;border-radius:20px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent">desde última atualização</button>
+      </div>
+    </div>
+    <div class="totals-grid" id="rel-totals"></div>
+    <div class="section-header"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title" id="rel-posts-title">📹 vídeos postados hoje</div></div>
+    <div id="rel-posts-cards"></div>
+    <div class="section-header"><div class="section-dot" style="background:var(--amber)"></div><div class="section-title">🏆 ranking de engajamento (semana atual)</div></div>
+    <div id="rel-ranking"></div>
+    <div class="section-header"><div class="section-dot" style="background:var(--green)"></div><div class="section-title">📈 saúde das contas</div></div>
+    <div id="rel-saude"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMpseLF68U6nCAFjHsCETBCSumu2l66kZNMJ-I4Vw94Q2PClm1m8Zg-O4mWhBz0jFX/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0dTXJ5XDzJjILaTbbRp5hDuGELyT6ci0hHTl00yfmkWG091CPDAVYyaERVxgtPLOL/exec';
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
@@ -234,6 +256,7 @@ function showTab(tab, el) {
   document.getElementById('page-' + tab).classList.add('active');
   el.classList.add('active');
   if (tab === 'historico') renderHistorico();
+  if (tab === 'relatorio') renderRelatorio();
   if (tab === 'posts') renderPostsHistory();
 }
 
@@ -473,17 +496,68 @@ function changePost(id, delta) {
   el.textContent = val;
 }
 
-function savePosts() {
+async function savePosts() {
   const date = document.getElementById('posts-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-  const lines = CONTAS.map((c, i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('p' + i).textContent || 0}`);
-  const csv = lines.join('\n');
-  const full = 'data,conta,dono,plataforma,posts\n' + csv;
-  document.getElementById('posts-copy-box').textContent = full;
-  document.getElementById('posts-copy-result').style.display = 'block';
-  navigator.clipboard.writeText(csv)
-    .then(() => showToast('✓ Copiado! Cole na aba posts da planilha.'))
-    .catch(() => showToast('Copie o texto abaixo manualmente.'));
+
+  const btn = document.getElementById('posts-save-btn');
+  const status = document.getElementById('posts-status');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  status.style.display = 'block';
+  status.style.background = 'rgba(124,106,247,0.1)';
+  status.style.color = 'var(--accent)';
+  status.textContent = '⏳ Enviando para a planilha...';
+
+  const entries = CONTAS.map((c, i) => ({
+    data: date,
+    conta: c.handle,
+    dono: c.dono,
+    plataforma: c.plat,
+    posts: parseInt(document.getElementById('p' + i).textContent) || 0
+  })).filter(e => e.posts > 0); // só envia quem postou
+
+  if (!entries.length) {
+    status.style.background = 'rgba(245,166,35,0.1)';
+    status.style.color = 'var(--amber)';
+    status.textContent = '⚠ Nenhuma conta com posts. Adicione pelo menos 1.';
+    btn.disabled = false;
+    btn.textContent = 'Salvar na planilha ↗';
+    return;
+  }
+
+  let ok = 0, fail = 0;
+  for (const entry of entries) {
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+      ok++;
+    } catch(e) {
+      fail++;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Salvar na planilha ↗';
+
+  if (fail === 0) {
+    status.style.background = 'rgba(62,207,142,0.12)';
+    status.style.color = 'var(--green)';
+    status.textContent = `✓ ${ok} conta(s) salvas na planilha com sucesso!`;
+    showToast('✓ Salvo na planilha!');
+    // Zera os contadores
+    CONTAS.forEach((_, i) => { document.getElementById('p' + i).textContent = '0'; });
+    // Recarrega histórico
+    setTimeout(() => loadData().then(() => renderPostsHistory()), 1500);
+  } else {
+    status.style.background = 'rgba(232,93,117,0.1)';
+    status.style.color = 'var(--accent2)';
+    status.textContent = `⚠ ${ok} salvas, ${fail} falharam. Verifique a conexão.`;
+  }
 }
 
 function renderPostsHistory() {
@@ -571,6 +645,184 @@ function showToast(msg) {
 }
 
 // Init
+
+let relMode = 'dia';
+
+function setRelMode(mode) {
+  relMode = mode;
+  const btnDia = document.getElementById('btn-dia');
+  const btnSem = document.getElementById('btn-semana');
+  if (mode === 'dia') {
+    btnDia.style.borderColor = 'var(--accent)'; btnDia.style.color = 'var(--accent)'; btnDia.style.background = 'rgba(124,106,247,0.1)';
+    btnSem.style.borderColor = 'var(--border)'; btnSem.style.color = 'var(--muted)'; btnSem.style.background = 'transparent';
+  } else {
+    btnSem.style.borderColor = 'var(--accent)'; btnSem.style.color = 'var(--accent)'; btnSem.style.background = 'rgba(124,106,247,0.1)';
+    btnDia.style.borderColor = 'var(--border)'; btnDia.style.color = 'var(--muted)'; btnDia.style.background = 'transparent';
+  }
+  renderRelatorio();
+}
+
+function renderRelatorio() {
+  document.getElementById('rel-loading').style.display = 'none';
+  document.getElementById('rel-content').style.display = 'block';
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // --- POSTS DO DIA / SEMANA ---
+  let postRows = [];
+  if (relMode === 'dia') {
+    postRows = allPosts.filter(r => r.data === today);
+    document.getElementById('rel-title').textContent = 'Relatório do dia';
+    document.getElementById('rel-subtitle').textContent = '// ' + today;
+    document.getElementById('rel-posts-title').textContent = '📹 vídeos postados hoje';
+  } else {
+    // desde a última semana com dados
+    const lastWeek = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse()[0] || today;
+    postRows = allPosts.filter(r => r.data >= lastWeek);
+    document.getElementById('rel-title').textContent = 'Relatório da semana';
+    document.getElementById('rel-subtitle').textContent = '// desde ' + lastWeek;
+    document.getElementById('rel-posts-title').textContent = '📹 vídeos postados desde a última atualização';
+  }
+
+  const totalPostsHoje = postRows.reduce((s, r) => s + (parseInt(r.posts) || 0), 0);
+
+  // totais da semana atual
+  const latestWeek = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse()[0];
+  const weekRows = allData.filter(r => r.semana === latestWeek);
+  const totalViews = weekRows.reduce((s, r) => s + (parseFloat(r.views) || 0), 0);
+  const totalInt   = weekRows.reduce((s, r) => s + (parseFloat(r.interacoes) || 0), 0);
+  const totalSeg   = weekRows.reduce((s, r) => s + (parseFloat(r.seguidores) || 0), 0);
+
+  // quantas contas postaram hoje
+  const contasAtivas = [...new Set(postRows.filter(r => (parseInt(r.posts)||0) > 0).map(r => r.conta))].length;
+
+  document.getElementById('rel-totals').innerHTML = `
+    <div class="total-card"><div class="total-label">vídeos ${relMode==='dia'?'hoje':'no período'}</div><div class="total-value">${totalPostsHoje}</div><div class="total-sub">${contasAtivas} conta(s) ativa(s)</div></div>
+    <div class="total-card green"><div class="total-label">views (semana)</div><div class="total-value">${fmt(totalViews)}</div><div class="total-sub">última semana registrada</div></div>
+    <div class="total-card amber"><div class="total-label">interações (semana)</div><div class="total-value">${fmt(totalInt)}</div><div class="total-sub">likes + comentários</div></div>
+    <div class="total-card red"><div class="total-label">seguidores (semana)</div><div class="total-value">${totalSeg >= 0 ? '+' : ''}${fmt(totalSeg)}</div><div class="total-sub">ganho líquido</div></div>`;
+
+  // --- CARDS DE POSTS ---
+  if (!postRows.length) {
+    document.getElementById('rel-posts-cards').innerHTML = '<div class="no-data">Nenhum post registrado para este período.</div>';
+  } else {
+    // agrupa por conta
+    const byAccount = {};
+    postRows.forEach(r => {
+      const key = r.conta + '|' + r.dono;
+      if (!byAccount[key]) byAccount[key] = { conta: r.conta, dono: r.dono, plat: r.plataforma, dias: {} };
+      byAccount[key].dias[r.data] = (byAccount[key].dias[r.data] || 0) + (parseInt(r.posts) || 0);
+    });
+    const sorted = Object.values(byAccount).sort((a, b) => {
+      const ta = Object.values(a.dias).reduce((s, v) => s + v, 0);
+      const tb = Object.values(b.dias).reduce((s, v) => s + v, 0);
+      return tb - ta;
+    });
+    document.getElementById('rel-posts-cards').innerHTML = sorted.map(acc => {
+      const total = Object.values(acc.dias).reduce((s, v) => s + v, 0);
+      const platColor = acc.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+      const dias = Object.entries(acc.dias).sort((a,b) => a[0].localeCompare(b[0]));
+      const bars = '▮'.repeat(Math.min(total, 15)) + (total > 15 ? '…' : '');
+      return `<div class="account-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <span style="font-size:14px;font-weight:700;color:var(--text)">${acc.conta}</span>
+            <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${acc.plat}</span>
+          </div>
+          <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${acc.dono}</div>
+          ${relMode === 'semana' ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${dias.map(([d,n]) => `<span style="font-size:10px;font-family:'IBM Plex Mono',monospace;background:var(--surface2);border-radius:6px;padding:2px 7px;color:var(--muted)">${d.slice(5)} <strong style="color:var(--text)">${n}</strong></span>`).join('')}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:22px;font-weight:800;color:var(--accent)">${total}</div>
+          <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--accent);letter-spacing:1px">${bars}</div>
+          <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${relMode==='dia'?'vídeos hoje':'vídeos no período'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // --- RANKING ENGAJAMENTO ---
+  const medals = ['🥇','🥈','🥉'];
+  if (!weekRows.length) {
+    document.getElementById('rel-ranking').innerHTML = '<div class="no-data">Sem dados de semana para ranking.</div>';
+  } else {
+    const ranked = weekRows.map(r => {
+      const it = parseFloat(r.interacoes) || 0;
+      const v  = parseFloat(r.views) || 0;
+      const contaInfo = CONTAS.find(c => c.handle === r.conta && c.dono === r.dono) || CONTAS.find(c => c.handle === r.conta);
+      const totalSeg = contaInfo ? contaInfo.totalSeg : 1;
+      const engRate = totalSeg > 0 ? (it / totalSeg * 100) : 0;
+      return { ...r, engRate, totalSeg, it, v };
+    }).sort((a, b) => b.engRate - a.engRate);
+
+    document.getElementById('rel-ranking').innerHTML = `<div class="chart-card">
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">semana: ${latestWeek || '—'} · score = interações ÷ seguidores × 100</div>
+      ${ranked.map((r, i) => {
+        const plat = r.plataforma || 'Instagram';
+        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+        const barW = Math.min(100, (r.engRate / (ranked[0].engRate || 1)) * 100);
+        const medal = medals[i] || `#${i+1}`;
+        const color = COLORS[i % COLORS.length];
+        // contagem de posts dessa conta nessa semana
+        const postsCount = allPosts.filter(p => p.conta === r.conta && p.dono === r.dono && p.data >= (latestWeek||'')).reduce((s,p) => s+(parseInt(p.posts)||0), 0);
+        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${r.conta}</span>
+              <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${plat}</span>
+              <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${r.dono}</span>
+              ${postsCount > 0 ? `<span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 7px;border-radius:20px;background:rgba(124,106,247,0.12);color:var(--accent)">${postsCount} vídeos</span>` : ''}
+            </div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
+              <div style="height:100%;width:${barW}%;background:${color};border-radius:4px;transition:width 0.6s ease"></div>
+            </div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
+              ${fmt(r.it)} interações · ${fmt(r.v)} views · ${fmt(r.totalSeg)} seguidores
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:16px;font-weight:800;color:${color}">${r.engRate.toFixed(2)}%</div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng/seg</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // --- SAÚDE DAS CONTAS ---
+  document.getElementById('rel-saude').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem">
+    ${CONTAS.map((c, idx) => {
+      const weekData = weekRows.find(r => r.conta === c.handle && r.dono === c.dono) || weekRows.find(r => r.conta === c.handle);
+      const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === today).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
+      const postsSemana = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data >= (latestWeek||'')).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
+      const seg = weekData ? (parseFloat(weekData.seguidores) || 0) : null;
+      const engRate = weekData ? ((parseFloat(weekData.interacoes)||0) / c.totalSeg * 100) : null;
+      const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
+      const color = COLORS[idx % COLORS.length];
+      const statusColor = postsHoje > 0 ? 'var(--green)' : 'var(--amber)';
+      const statusText = postsHoje > 0 ? `✓ postou ${postsHoje} hoje` : '○ sem posts hoje';
+      return `<div class="account-card" style="position:relative">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${c.handle}</span>
+              <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor};font-family:'IBM Plex Mono',monospace">${c.plat}</span>
+            </div>
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:2px">${c.dono}</div>
+          </div>
+          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${statusColor};background:${statusColor}18;padding:3px 10px;border-radius:20px;white-space:nowrap">${statusText}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <div class="metric-pill"><div class="metric-pill-label">posts semana</div><div class="metric-pill-val">${postsSemana || '—'}</div></div>
+          <div class="metric-pill"><div class="metric-pill-label">seguidores base</div><div class="metric-pill-val">${fmt(c.totalSeg)}</div></div>
+          <div class="metric-pill"><div class="metric-pill-label">eng/seg</div><div class="metric-pill-val" style="color:${color}">${engRate !== null ? engRate.toFixed(2)+'%' : '—'}</div></div>
+        </div>
+        ${seg !== null ? `<div style="margin-top:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:${seg>=0?'var(--green)':'var(--accent2)'}">seguidores semana: ${seg>=0?'+':''}${fmt(seg)}</div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
 buildForm();
 buildPostsForm();
 loadData();
