@@ -49,21 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .trend-badge.down{background:rgba(232,93,117,0.12);color:var(--accent2)}
 .trend-badge.neutral{background:var(--surface2);color:var(--muted)}
 .metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-@media(max-width:600px){
-  .metrics-row{grid-template-columns:repeat(2,1fr)}
-  .top-bar{padding:0.8rem 1rem}
-  .tabs{gap:3px;overflow-x:auto;padding-bottom:2px;flex-wrap:nowrap;width:100%;scrollbar-width:none}
-  .tabs::-webkit-scrollbar{display:none}
-  .tab{font-size:11px;padding:5px 11px;white-space:nowrap;flex-shrink:0}
-  .page{padding:1rem;padding-bottom:4rem}
-  .totals-grid{grid-template-columns:repeat(2,1fr)}
-  .total-value{font-size:20px}
-  .charts-grid{grid-template-columns:1fr}
-  .form-fields{grid-template-columns:repeat(2,1fr)}
-  .acc-form-card{padding:1rem}
-  .section-header{margin-top:1.5rem}
-  .rel-conta-grid{grid-template-columns:repeat(2,1fr)!important}
-}
+@media(max-width:600px){.metrics-row{grid-template-columns:repeat(2,1fr)}}
 .metric-pill{background:var(--surface2);border-radius:10px;padding:8px 10px}
 .metric-pill-label{font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:3px}
 .metric-pill-val{font-size:14px;font-weight:700;color:var(--text)}
@@ -104,7 +90,6 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 .no-data{text-align:center;padding:3rem;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
 .stripe{height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--green),var(--amber))}
 .copy-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-top:1rem;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
-input[type=date]{color-scheme:dark}
 </style>
 </head>
 <body>
@@ -113,10 +98,10 @@ input[type=date]{color-scheme:dark}
   <div class="logo">pavanato<span>.</span>report</div>
   <div class="tabs">
     <button class="tab active" onclick="showTab('dashboard',this)">dashboard</button>
-    <button class="tab" onclick="showTab('relatorio',this)">📊 relatório</button>
     <button class="tab" onclick="showTab('posts',this)">posts diários</button>
     <button class="tab" onclick="showTab('update',this)">atualizar</button>
     <button class="tab" onclick="showTab('historico',this)">histórico</button>
+    <button class="tab" onclick="showTab('exportar',this)">📥 exportar</button>
   </div>
 </div>
 
@@ -165,15 +150,18 @@ input[type=date]{color-scheme:dark}
   <div class="form-header"><h2>Posts diários</h2><p>// quantos vídeos cada conta publicou por dia</p></div>
   <div class="form-week"><label>Data:</label><input type="date" id="posts-date"></div>
   <div id="posts-form-accounts"></div>
-  <button class="save-btn" id="posts-save-btn" onclick="savePosts()">Salvar na planilha ↗</button>
-  <div id="posts-status" style="display:none;margin-top:1rem;font-size:13px;font-family:'IBM Plex Mono',monospace;text-align:center;padding:12px;border-radius:10px"></div>
+  <button class="save-btn" onclick="savePosts()">Copiar dados para planilha ↗</button>
+  <div id="posts-copy-result" style="display:none">
+    <div style="margin-top:1rem;font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--green)">✓ Copiado! Cole na aba <strong>posts</strong> da planilha.</div>
+    <div class="copy-box" id="posts-copy-box"></div>
+  </div>
 
   <div class="section-header" style="margin-top:2rem"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title">histórico de posts</div></div>
   <div id="posts-history-loading" class="loading" style="min-height:150px"><div class="spinner"></div><span>carregando...</span></div>
   <div id="posts-history" style="display:none"></div>
 </div>
 
-<!-- ATUALIZAR -->
+
 <div id="page-update" class="page">
   <div class="form-header"><h2>Atualizar dados</h2><p>// preencha os dados da semana e salve na planilha</p></div>
   <div class="instrucoes-card">
@@ -216,46 +204,36 @@ input[type=date]{color-scheme:dark}
   </div>
 </div>
 
-<!-- RELATÓRIO -->
-<div id="page-relatorio" class="page">
-  <div id="rel-loading" class="loading"><div class="spinner"></div><span>carregando dados...</span></div>
-  <div id="rel-content" style="display:none">
-    <!-- SELETOR DE DATA DESTAQUE -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1.5rem">
-      <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">📅 selecionar dia para visualizar</div>
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <input type="date" id="rel-date-picker"
-          style="background:var(--surface2);border:2px solid var(--accent);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;padding:10px 16px;border-radius:12px;outline:none;cursor:pointer;flex:1;min-width:160px"
-          onchange="onRelDateChange()">
-        <button onclick="setRelDateToday()"
-          style="font-size:12px;font-family:'IBM Plex Mono',monospace;padding:10px 18px;border-radius:12px;cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:rgba(124,106,247,0.1);white-space:nowrap;transition:all 0.2s"
-          onmouseover="this.style.background='rgba(124,106,247,0.2)'" onmouseout="this.style.background='rgba(124,106,247,0.1)'">
-          hoje
-        </button>
-        <button onclick="setRelMode('semana')" id="btn-semana"
-          style="font-size:12px;font-family:'IBM Plex Mono',monospace;padding:10px 18px;border-radius:12px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;white-space:nowrap;transition:all 0.2s">
-          desde última atualização
-        </button>
-      </div>
-      <div id="rel-date-label" style="font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--text);margin-top:10px;font-weight:600"></div>
+<!-- EXPORTAR -->
+<div id="page-exportar" class="page">
+  <div class="form-header"><h2>Exportar relatório</h2><p>// escolha o período e baixe o PDF ou CSV</p></div>
+  <div class="chart-card" style="margin-bottom:1rem">
+    <div class="chart-title">período do relatório</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+      <div class="field-group"><label>De</label><input type="date" id="exp-from" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:8px 12px;border-radius:10px;outline:none;width:100%"></div>
+      <div class="field-group"><label>Até</label><input type="date" id="exp-to" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:8px 12px;border-radius:10px;outline:none;width:100%"></div>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem">
+      <button onclick="setExpRange(7)"  style="padding:6px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer">últimos 7 dias</button>
+      <button onclick="setExpRange(14)" style="padding:6px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer">últimos 14 dias</button>
+      <button onclick="setExpRange(30)" style="padding:6px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer">últimos 30 dias</button>
+    </div>
+    <button onclick="previewExport()" class="save-btn" style="margin:0">Gerar prévia do relatório</button>
+  </div>
 
-    <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px" id="rel-title">Relatório do dia</div>
-    <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-bottom:1.5rem" id="rel-subtitle"></div>
-    <div class="totals-grid" id="rel-totals"></div>
-    <div class="section-header"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title" id="rel-posts-title">📹 vídeos postados hoje</div></div>
-    <div id="rel-posts-cards"></div>
-    <div class="section-header"><div class="section-dot" style="background:var(--amber)"></div><div class="section-title">🏆 ranking de engajamento (semana atual)</div></div>
-    <div id="rel-ranking"></div>
-    <div class="section-header"><div class="section-dot" style="background:var(--green)"></div><div class="section-title">📈 saúde das contas</div></div>
-    <div id="rel-saude"></div>
+  <div id="exp-preview" style="display:none">
+    <div id="exp-preview-content"></div>
+    <div style="display:flex;gap:10px;margin-top:1.5rem;flex-wrap:wrap">
+      <button onclick="downloadCSV()" class="save-btn" style="margin:0;flex:1;background:var(--green);color:#0a0a0f">⬇ Baixar CSV</button>
+      <button onclick="downloadPDF()" class="save-btn" style="margin:0;flex:1">⬇ Baixar PDF</button>
+    </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+
 
 <script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0dTXJ5XDzJjILaTbbRp5hDuGELyT6ci0hHTl00yfmkWG091CPDAVYyaERVxgtPLOL/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMpseLF68U6nCAFjHsCETBCSumu2l66kZNMJ-I4Vw94Q2PClm1m8Zg-O4mWhBz0jFX/exec';
 const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSffXo8sFJuNOy8UDQRU-hbt0VKj8IlZ5S_Nypo_ZhBBS8ELSucJ92awJHq48rPrglkVKaOuyXszPgU/pub?output=csv';
 
 const CONTAS = [
@@ -275,21 +253,22 @@ const TICK = '#6b6b80';
 const MONO = 'IBM Plex Mono';
 let allData = [];
 let charts = {};
-let allPosts = [];
 
 function showTab(tab, el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
   el.classList.add('active');
-  if (tab === 'historico') renderHistorico();
-  if (tab === 'relatorio') renderRelatorio();
-  if (tab === 'posts') renderPostsHistory();
+  if (tab==='historico') renderHistorico();
+  if (tab==='posts') renderPostsHistory();
 }
 
+let allPosts = [];
+
 async function loadData() {
-  document.getElementById('dash-loading').style.display = 'none';
-  document.getElementById('dash-content').style.display = 'block';
+  // mostra conteúdo imediatamente, carrega dados depois
+  document.getElementById('dash-loading').style.display='none';
+  document.getElementById('dash-content').style.display='block';
   populateWeeks();
   renderDashboard();
 
@@ -310,10 +289,10 @@ async function loadData() {
     }
 
     allData = allData.map(row => ({
-      semana: String(row.semana || '').split('T')[0],
-      conta: String(row.conta || ''),
-      dono: String(row.dono || ''),
-      plataforma: String(row.plataforma || 'Instagram'),
+      semana: String(row.semana||'').split('T')[0],
+      conta: String(row.conta||''),
+      dono: String(row.dono||''),
+      plataforma: String(row.plataforma||'Instagram'),
       views: row.views,
       interacoes: row.interacoes,
       seguidores: row.seguidores,
@@ -321,54 +300,51 @@ async function loadData() {
     })).filter(r => r.semana);
 
     allPosts = allPosts.map(row => ({
-      data: String(row.data || row.semana || '').split('T')[0],
-      conta: String(row.conta || ''),
-      dono: String(row.dono || ''),
-      plataforma: String(row.plataforma || 'Instagram'),
+      data: String(row.data||row.semana||'').split('T')[0],
+      conta: String(row.conta||''),
+      dono: String(row.dono||''),
+      plataforma: String(row.plataforma||'Instagram'),
       posts: row.posts,
     })).filter(r => r.data);
 
     populateWeeks();
     renderDashboard();
   } catch(e) {
-    document.getElementById('dash-error').style.display = 'block';
+    document.getElementById('dash-error').style.display='block';
     document.getElementById('dash-error').innerHTML = '⚠ Não foi possível carregar os dados da planilha. Verifique a conexão e recarregue.<br><small>' + e.message + '</small>';
   }
 }
 
 function populateWeeks() {
-  const weeks = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse();
+  const weeks = [...new Set(allData.map(r=>r.semana))].filter(Boolean).sort().reverse();
   const sel = document.getElementById('week-select');
-  sel.innerHTML = weeks.length
-    ? weeks.map(w => `<option value="${w}">${w}</option>`).join('')
-    : '<option value="">Sem dados ainda</option>';
+  sel.innerHTML = weeks.length ? weeks.map(w=>`<option value="${w}">${w}</option>`).join('') : '<option value="">Sem dados ainda</option>';
 }
 
 function renderDashboard() {
   const week = document.getElementById('week-select').value;
-  const rows = allData.filter(r => r.semana === week);
+  const rows = allData.filter(r=>r.semana===week);
   if (!rows.length) {
     document.getElementById('accounts-list').innerHTML = '<div class="no-data">Nenhum dado para esta semana.<br>Use a aba <strong>Atualizar</strong>.</div>';
     return;
   }
-  const tv = rows.reduce((s, r) => s + (parseFloat(r.views) || 0), 0);
-  const ti = rows.reduce((s, r) => s + (parseFloat(r.interacoes) || 0), 0);
-  const ts = rows.reduce((s, r) => s + (parseFloat(r.seguidores) || 0), 0);
+  const tv = rows.reduce((s,r)=>s+(parseFloat(r.views)||0),0);
+  const ti = rows.reduce((s,r)=>s+(parseFloat(r.interacoes)||0),0);
+  const ts = rows.reduce((s,r)=>s+(parseFloat(r.seguidores)||0),0);
   document.getElementById('dash-period').textContent = '// semana de ' + week;
   document.getElementById('dash-totals').innerHTML = `
     <div class="total-card"><div class="total-label">total visualizações</div><div class="total-value">${fmt(tv)}</div><div class="total-sub">todas as contas</div></div>
     <div class="total-card green"><div class="total-label">total interações</div><div class="total-value">${fmt(ti)}</div><div class="total-sub">likes + comentários</div></div>
-    <div class="total-card amber"><div class="total-label">novos seguidores</div><div class="total-value">${ts >= 0 ? '+' : ''}${fmt(ts)}</div><div class="total-sub">líquido combinado</div></div>
+    <div class="total-card amber"><div class="total-label">novos seguidores</div><div class="total-value">${ts>=0?'+':''}${fmt(ts)}</div><div class="total-sub">líquido combinado</div></div>
     <div class="total-card red"><div class="total-label">contas ativas</div><div class="total-value">${rows.length}</div><div class="total-sub">Instagram</div></div>`;
-
-  document.getElementById('accounts-list').innerHTML = rows.map((r, i) => {
-    const seg = parseFloat(r.seguidores) || 0;
-    const tc = seg > 0 ? 'up' : seg < 0 ? 'down' : 'neutral';
-    const ti = seg > 0 ? '▲' : seg < 0 ? '▼' : '=';
-    const v = parseFloat(r.views) || 0, it = parseFloat(r.interacoes) || 0;
-    const plat = r.plataforma || 'Instagram';
-    const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-    const platBg = plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)';
+  document.getElementById('accounts-list').innerHTML = rows.map((r,i)=>{
+    const seg=parseFloat(r.seguidores)||0;
+    const tc=seg>0?'up':seg<0?'down':'neutral';
+    const ti=seg>0?'▲':seg<0?'▼':'=';
+    const v=parseFloat(r.views)||0, it=parseFloat(r.interacoes)||0;
+    const plat=r.plataforma||'Instagram';
+    const platColor=plat==='TikTok'?'#ff3b5c':'#e1306c';
+    const platBg=plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
     return `<div class="account-card">
       <div class="acc-header"><div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -377,38 +353,40 @@ function renderDashboard() {
         </div>
         <div class="acc-owner">${r.dono}</div>
       </div>
-      <div class="trend-badge ${tc}">${ti} ${seg >= 0 ? '+' : ''}${fmt(seg)}</div></div>
+      <div class="trend-badge ${tc}">${ti} ${seg>=0?'+':''}${fmt(seg)}</div></div>
       <div class="metrics-row">
         <div class="metric-pill"><div class="metric-pill-label">Visualizações</div><div class="metric-pill-val">${fmt(v)}</div></div>
         <div class="metric-pill"><div class="metric-pill-label">Interações</div><div class="metric-pill-val">${fmt(it)}</div></div>
-        <div class="metric-pill"><div class="metric-pill-label">Seg. líquidos</div><div class="metric-pill-val ${seg < 0 ? 'neg' : ''}">${seg >= 0 ? '+' : ''}${fmt(seg)}</div></div>
-        <div class="metric-pill"><div class="metric-pill-label">Conteúdos</div><div class="metric-pill-val">${r.conteudos || '—'}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Seg. líquidos</div><div class="metric-pill-val ${seg<0?'neg':''}">${seg>=0?'+':''}${fmt(seg)}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Conteúdos</div><div class="metric-pill-val">${r.conteudos||'—'}</div></div>
       </div></div>`;
   }).join('');
 
-  // RANKING por engajamento
+  // RANKING por engajamento proporcional ao total de seguidores
   const medals = ['🥇','🥈','🥉'];
   const ranked = rows.map(r => {
-    const it = parseFloat(r.interacoes) || 0;
-    const v  = parseFloat(r.views) || 0;
+    const it = parseFloat(r.interacoes)||0;
+    const v  = parseFloat(r.views)||0;
+    // cruza pelo handle + dono para diferenciar contas com mesmo @
     const contaInfo = CONTAS.find(c => c.handle === r.conta && c.dono === r.dono)
                    || CONTAS.find(c => c.handle === r.conta);
     const totalSeg = (contaInfo && contaInfo.totalSeg) ? contaInfo.totalSeg : 1;
     const engRate  = totalSeg > 0 ? (it / totalSeg * 100) : 0;
-    return {...r, engRate, totalSeg};
-  }).sort((a, b) => b.engRate - a.engRate);
+    const viewRate = v > 0 ? (it / v * 100) : 0;
+    return {...r, engRate, viewRate, totalSeg};
+  }).sort((a,b) => b.engRate - a.engRate);
 
   document.getElementById('ranking-list').innerHTML = `
     <div class="chart-card">
       <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">
         score = interações ÷ total de seguidores × 100
       </div>
-      ${ranked.map((r, i) => {
-        const plat = r.plataforma || 'Instagram';
-        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-        const barW = Math.min(100, (r.engRate / (ranked[0].engRate || 1)) * 100);
+      ${ranked.map((r,i) => {
+        const plat = r.plataforma||'Instagram';
+        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
+        const barW = Math.min(100, (r.engRate / (ranked[0].engRate||1)) * 100);
         const medal = medals[i] || `#${i+1}`;
-        const color = COLORS[i % COLORS.length];
+        const color = COLORS[i%COLORS.length];
         return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
           <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
           <div style="flex:1;min-width:0">
@@ -421,7 +399,7 @@ function renderDashboard() {
               <div style="height:100%;width:${barW}%;background:${color};border-radius:4px"></div>
             </div>
             <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
-              ${fmt(parseFloat(r.interacoes) || 0)} interações ÷ ${fmt(r.totalSeg)} seguidores
+              ${fmt(parseFloat(r.interacoes)||0)} interações ÷ ${fmt(r.totalSeg)} seguidores
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
@@ -431,15 +409,14 @@ function renderDashboard() {
         </div>`;
       }).join('')}
     </div>`;
-
-  const labels = rows.map(r => r.dono || r.conta);
-  const vs = rows.map(r => parseFloat(r.views) || 0);
-  const is = rows.map(r => parseFloat(r.interacoes) || 0);
-  const ss = rows.map(r => parseFloat(r.seguidores) || 0);
-  const er = vs.map((v, i) => v > 0 ? parseFloat((is[i] / v * 100).toFixed(2)) : 0);
-  const cl = rows.map((_, i) => COLORS[i % COLORS.length]);
-  document.getElementById('legend-views').innerHTML = rows.map((r, i) =>
-    `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${r.dono || r.conta}</div>`).join('');
+  const labels=rows.map(r=>r.dono||r.conta);
+  const vs=rows.map(r=>parseFloat(r.views)||0);
+  const is=rows.map(r=>parseFloat(r.interacoes)||0);
+  const ss=rows.map(r=>parseFloat(r.seguidores)||0);
+  const er=vs.map((v,i)=>v>0?parseFloat((is[i]/v*100).toFixed(2)):0);
+  const cl=rows.map((_,i)=>COLORS[i%COLORS.length]);
+  document.getElementById('legend-views').innerHTML=rows.map((r,i)=>
+    `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${r.dono||r.conta}</div>`).join('');
   const bo = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10},maxRotation:30}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
   mk('cViews','bar',labels,[{data:vs,backgroundColor:cl,borderRadius:6,borderSkipped:false}],bo);
   mk('cInt','bar',labels,[{data:is,backgroundColor:cl,borderRadius:6,borderSkipped:false}],bo);
@@ -448,33 +425,23 @@ function renderDashboard() {
 }
 
 function renderHistorico() {
-  document.getElementById('hist-loading').style.display = 'none';
-  document.getElementById('hist-content').style.display = 'block';
+  document.getElementById('hist-loading').style.display='none';
+  document.getElementById('hist-content').style.display='block';
   if (!allData.length) {
-    document.getElementById('hist-table').innerHTML = '<div class="no-data">Nenhum dado ainda.</div>';
+    document.getElementById('hist-table').innerHTML='<div class="no-data">Nenhum dado ainda.</div>';
     return;
   }
-  const weeks = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort();
-  const contas = [...new Set(allData.map(r => r.conta))];
-  const cl = contas.map((_, i) => COLORS[i % COLORS.length]);
-  document.getElementById('legend-hist').innerHTML = contas.map((c, i) =>
+  const weeks=[...new Set(allData.map(r=>r.semana))].filter(Boolean).sort();
+  const contas=[...new Set(allData.map(r=>r.conta))];
+  const cl=contas.map((_,i)=>COLORS[i%COLORS.length]);
+  document.getElementById('legend-hist').innerHTML=contas.map((c,i)=>
     `<div class="legend-item"><div class="legend-dot" style="background:${cl[i]}"></div>${c}</div>`).join('');
-  const bo = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
-  const vds = contas.map((c, i) => ({
-    label: c,
-    data: weeks.map(w => { const r = allData.find(d => d.semana === w && d.conta === c); return r ? parseFloat(r.views) || 0 : null; }),
-    borderColor: cl[i], backgroundColor: cl[i] + '22', pointBackgroundColor: cl[i],
-    pointRadius: 4, fill: false, tension: 0.3, borderWidth: 2, spanGaps: true
-  }));
-  const sds = contas.map((c, i) => ({
-    label: c,
-    data: weeks.map(w => { const r = allData.find(d => d.semana === w && d.conta === c); return r ? parseFloat(r.seguidores) || 0 : null; }),
-    borderColor: cl[i], backgroundColor: cl[i] + '22', pointBackgroundColor: cl[i],
-    pointRadius: 4, fill: false, tension: 0.3, borderWidth: 2, spanGaps: true
-  }));
-  mk('cHistViews', 'line', weeks, vds, bo);
-  mk('cHistSeg', 'line', weeks, sds, bo);
-  document.getElementById('hist-table').innerHTML = `
+  const bo={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#f0f0f5',bodyColor:'#6b6b80',titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10}},scales:{x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}},y:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}}}};
+  const vds=contas.map((c,i)=>({label:c,data:weeks.map(w=>{const r=allData.find(d=>d.semana===w&&d.conta===c);return r?parseFloat(r.views)||0:null;}),borderColor:cl[i],backgroundColor:cl[i]+'22',pointBackgroundColor:cl[i],pointRadius:4,fill:false,tension:0.3,borderWidth:2,spanGaps:true}));
+  const sds=contas.map((c,i)=>({label:c,data:weeks.map(w=>{const r=allData.find(d=>d.semana===w&&d.conta===c);return r?parseFloat(r.seguidores)||0:null;}),borderColor:cl[i],backgroundColor:cl[i]+'22',pointBackgroundColor:cl[i],pointRadius:4,fill:false,tension:0.3,borderWidth:2,spanGaps:true}));
+  mk('cHistViews','line',weeks,vds,bo);
+  mk('cHistSeg','line',weeks,sds,bo);
+  document.getElementById('hist-table').innerHTML=`
     <div class="chart-card"><div class="chart-title">todos os registros</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)">
       <thead><tr style="border-bottom:1px solid var(--border)">
@@ -484,22 +451,22 @@ function renderHistorico() {
         <th style="text-align:right;padding:8px 10px">interações</th>
         <th style="text-align:right;padding:8px 10px">seguidores</th>
       </tr></thead>
-      <tbody>${[...allData].reverse().map(r => `
+      <tbody>${[...allData].reverse().map(r=>`
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:8px 10px;color:var(--text)">${r.semana}</td>
           <td style="padding:8px 10px">${r.conta}</td>
-          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.views) || 0)}</td>
-          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.interacoes) || 0)}</td>
-          <td style="padding:8px 10px;text-align:right;color:${(parseFloat(r.seguidores) || 0) < 0 ? 'var(--accent2)' : 'var(--green)'}">${(parseFloat(r.seguidores) || 0) >= 0 ? '+' : ''}${fmt(parseFloat(r.seguidores) || 0)}</td>
+          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.views)||0)}</td>
+          <td style="padding:8px 10px;text-align:right">${fmt(parseFloat(r.interacoes)||0)}</td>
+          <td style="padding:8px 10px;text-align:right;color:${(parseFloat(r.seguidores)||0)<0?'var(--accent2)':'var(--green)'}">${(parseFloat(r.seguidores)||0)>=0?'+':''}${fmt(parseFloat(r.seguidores)||0)}</td>
         </tr>`).join('')}</tbody>
     </table></div></div>`;
 }
 
 function buildPostsForm() {
   document.getElementById('posts-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('posts-form-accounts').innerHTML = CONTAS.map((c, i) => {
-    const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-    const platBg = c.plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)';
+  document.getElementById('posts-form-accounts').innerHTML = CONTAS.map((c,i) => {
+    const platColor = c.plat==='TikTok'?'#ff3b5c':'#e1306c';
+    const platBg = c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)';
     return `<div class="acc-form-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
       <div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -519,72 +486,19 @@ function buildPostsForm() {
 
 function changePost(id, delta) {
   const el = document.getElementById(id);
-  const val = Math.max(0, (parseInt(el.textContent) || 0) + delta);
+  const val = Math.max(0, (parseInt(el.textContent)||0) + delta);
   el.textContent = val;
 }
 
-async function savePosts() {
+function savePosts() {
   const date = document.getElementById('posts-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-
-  const btn = document.getElementById('posts-save-btn');
-  const status = document.getElementById('posts-status');
-  btn.disabled = true;
-  btn.textContent = 'Salvando...';
-  status.style.display = 'block';
-  status.style.background = 'rgba(124,106,247,0.1)';
-  status.style.color = 'var(--accent)';
-  status.textContent = '⏳ Enviando para a planilha...';
-
-  const entries = CONTAS.map((c, i) => ({
-    data: date,
-    conta: c.handle,
-    dono: c.dono,
-    plataforma: c.plat,
-    posts: parseInt(document.getElementById('p' + i).textContent) || 0
-  })).filter(e => e.posts > 0); // só envia quem postou
-
-  if (!entries.length) {
-    status.style.background = 'rgba(245,166,35,0.1)';
-    status.style.color = 'var(--amber)';
-    status.textContent = '⚠ Nenhuma conta com posts. Adicione pelo menos 1.';
-    btn.disabled = false;
-    btn.textContent = 'Salvar na planilha ↗';
-    return;
-  }
-
-  let ok = 0, fail = 0;
-  for (const entry of entries) {
-    try {
-      await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      });
-      ok++;
-    } catch(e) {
-      fail++;
-    }
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Salvar na planilha ↗';
-
-  if (fail === 0) {
-    status.style.background = 'rgba(62,207,142,0.12)';
-    status.style.color = 'var(--green)';
-    status.textContent = `✓ ${ok} conta(s) salvas na planilha com sucesso!`;
-    showToast('✓ Salvo na planilha!');
-    // Zera os contadores
-    CONTAS.forEach((_, i) => { document.getElementById('p' + i).textContent = '0'; });
-    // Recarrega histórico
-    setTimeout(() => loadData().then(() => renderPostsHistory()), 1500);
-  } else {
-    status.style.background = 'rgba(232,93,117,0.1)';
-    status.style.color = 'var(--accent2)';
-    status.textContent = `⚠ ${ok} salvas, ${fail} falharam. Verifique a conexão.`;
-  }
+  const lines = CONTAS.map((c,i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('p'+i).textContent||0}`);
+  const csv = lines.join('\n');
+  const full = 'data,conta,dono,plataforma,posts\n' + csv;
+  document.getElementById('posts-copy-box').textContent = full;
+  document.getElementById('posts-copy-result').style.display = 'block';
+  navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na aba posts da planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
 }
 
 function renderPostsHistory() {
@@ -594,20 +508,20 @@ function renderPostsHistory() {
     document.getElementById('posts-history').innerHTML = '<div class="no-data">Nenhum registro de posts ainda.<br>Use o formulário acima para registrar.</div>';
     return;
   }
-  const days = [...new Set(allPosts.map(r => r.data))].sort().reverse();
+  const days = [...new Set(allPosts.map(r=>r.data))].sort().reverse();
   document.getElementById('posts-history').innerHTML = days.map(day => {
-    const dayRows = allPosts.filter(r => r.data === day);
-    const total = dayRows.reduce((s, r) => s + (parseInt(r.posts) || 0), 0);
+    const dayRows = allPosts.filter(r=>r.data===day);
+    const total = dayRows.reduce((s,r)=>s+(parseInt(r.posts)||0),0);
     return `<div class="chart-card" style="margin-bottom:1rem">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div style="font-size:14px;font-weight:700;color:var(--text)">${day}</div>
         <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${total} posts total</div>
       </div>
       ${dayRows.map(r => {
-        const posts = parseInt(r.posts) || 0;
-        const plat = r.plataforma || 'Instagram';
-        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-        const bars = Array(Math.min(posts, 10)).fill('▮').join(' ') || '—';
+        const posts = parseInt(r.posts)||0;
+        const plat = r.plataforma||'Instagram';
+        const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
+        const bars = Array(Math.min(posts,10)).fill('▮').join(' ') || '—';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
           <div>
             <span style="font-size:13px;color:var(--text)">${r.conta}</span>
@@ -619,14 +533,12 @@ function renderPostsHistory() {
     </div>`;
   }).join('');
 }
-
-function buildForm() {
   document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('form-accounts').innerHTML = CONTAS.map((c, i) => `
+  document.getElementById('form-accounts').innerHTML = CONTAS.map((c,i)=>`
     <div class="acc-form-card">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div class="acc-form-name">${c.handle}</div>
-        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${c.plat === 'TikTok' ? 'rgba(255,59,92,0.15)' : 'rgba(225,48,108,0.15)'};color:${c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c'}">${c.plat}</span>
+        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 8px;border-radius:20px;background:${c.plat==='TikTok'?'rgba(255,59,92,0.15)':'rgba(225,48,108,0.15)'};color:${c.plat==='TikTok'?'#ff3b5c':'#e1306c'}">${c.plat}</span>
       </div>
       <div class="acc-form-owner">${c.dono}</div>
       <div class="form-fields">
@@ -641,26 +553,24 @@ function buildForm() {
 function saveWeek() {
   const date = document.getElementById('form-date').value;
   if (!date) { showToast('Escolha uma data!'); return; }
-  const lines = CONTAS.map((c, i) => `${date},${c.handle},${c.dono},${c.plat},${document.getElementById('v' + i).value || 0},${document.getElementById('i' + i).value || 0},${document.getElementById('s' + i).value || 0},${document.getElementById('c' + i).value || 0}`);
+  const lines = CONTAS.map((c,i)=>`${date},${c.handle},${c.dono},${c.plat},${document.getElementById('v'+i).value||0},${document.getElementById('i'+i).value||0},${document.getElementById('s'+i).value||0},${document.getElementById('c'+i).value||0}`);
   const csv = lines.join('\n');
   const full = 'semana,conta,dono,plataforma,views,interacoes,seguidores,conteudos\n' + csv;
   document.getElementById('copy-box').textContent = full;
   document.getElementById('copy-result').style.display = 'block';
-  navigator.clipboard.writeText(csv)
-    .then(() => showToast('✓ Copiado! Cole na planilha.'))
-    .catch(() => showToast('Copie o texto abaixo manualmente.'));
+  navigator.clipboard.writeText(csv).then(()=>showToast('✓ Copiado! Cole na planilha.')).catch(()=>showToast('Copie o texto abaixo manualmente.'));
 }
 
 function mk(id, type, labels, datasets, options) {
   if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart(document.getElementById(id), {type, data: {labels, datasets}, options});
+  charts[id] = new Chart(document.getElementById(id), {type, data:{labels, datasets}, options});
 }
 
 function fmt(n) {
   const abs = Math.abs(n);
   const sign = n < 0 ? '-' : '';
-  if (abs >= 1000000) return sign + (abs / 1000000).toFixed(1) + 'mi';
-  if (abs >= 1000) return sign + (abs / 1000).toFixed(1) + 'mil';
+  if (abs >= 1000000) return sign + (abs/1000000).toFixed(1) + 'mi';
+  if (abs >= 1000) return sign + (abs/1000).toFixed(1) + 'mil';
   return Math.round(n).toLocaleString('pt-BR');
 }
 
@@ -668,284 +578,387 @@ function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
+  setTimeout(()=>t.classList.remove('show'), 3500);
 }
 
-// Init
+buildForm();
+buildPostsForm();
+initExport();
+loadData();
 
-let relMode = 'dia';
-let relSelectedDate = new Date().toISOString().split('T')[0];
-
-function setRelDateToday() {
-  relMode = 'dia';
-  relSelectedDate = new Date().toISOString().split('T')[0];
-  const picker = document.getElementById('rel-date-picker');
-  if (picker) picker.value = relSelectedDate;
-  updateRelModeButtons();
-  renderRelatorio();
-}
-
-function onRelDateChange() {
-  const picker = document.getElementById('rel-date-picker');
-  if (!picker.value) return;
-  relSelectedDate = picker.value;
-  relMode = 'dia';
-  updateRelModeButtons();
-  renderRelatorio();
-}
-
-function updateRelModeButtons() {
-  const btnSem = document.getElementById('btn-semana');
-  if (!btnSem) return;
-  if (relMode === 'semana') {
-    btnSem.style.borderColor = 'var(--accent)'; btnSem.style.color = 'var(--accent)'; btnSem.style.background = 'rgba(124,106,247,0.1)';
-  } else {
-    btnSem.style.borderColor = 'var(--border)'; btnSem.style.color = 'var(--muted)'; btnSem.style.background = 'transparent';
-  }
-}
-
-function setRelMode(mode) {
-  relMode = mode;
-  if (mode === 'dia') {
-    relSelectedDate = new Date().toISOString().split('T')[0];
-    const picker = document.getElementById('rel-date-picker');
-    if (picker) picker.value = relSelectedDate;
-  }
-  updateRelModeButtons();
-  renderRelatorio();
-}
-
-function renderRelatorio() {
-  document.getElementById('rel-loading').style.display = 'none';
-  document.getElementById('rel-content').style.display = 'block';
-
+// ===== EXPORTAR =====
+function initExport() {
   const today = new Date().toISOString().split('T')[0];
+  const week = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('exp-from').value = week;
+  document.getElementById('exp-to').value = today;
+}
 
-  // Inicializa o date picker se ainda não tiver valor
-  const picker = document.getElementById('rel-date-picker');
-  if (picker && !picker.value) picker.value = relSelectedDate;
+function setExpRange(days) {
+  const today = new Date().toISOString().split('T')[0];
+  const from = new Date(Date.now() - days*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('exp-from').value = from;
+  document.getElementById('exp-to').value = today;
+}
 
-  // --- POSTS DO DIA / SEMANA ---
-  let postRows = [];
-  const activeDate = relSelectedDate || today;
-  const isToday = activeDate === today;
+function getExpData() {
+  const from = document.getElementById('exp-from').value;
+  const to = document.getElementById('exp-to').value;
+  if (!from || !to) { showToast('Escolha o período!'); return null; }
+  return allData.filter(r => r.semana >= from && r.semana <= to);
+}
 
-  if (relMode === 'dia') {
-    postRows = allPosts.filter(r => r.data === activeDate);
-    // Formata a data de forma legível
-    const [y, m, d] = activeDate.split('-');
-    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-    const dataFormatada = `${d} ${meses[parseInt(m)-1]} ${y}`;
-    document.getElementById('rel-title').textContent = isToday ? 'Relatório de hoje' : `Relatório de ${dataFormatada}`;
-    document.getElementById('rel-subtitle').textContent = '// ' + activeDate;
-    document.getElementById('rel-posts-title').textContent = `📹 vídeos postados em ${dataFormatada}`;
-    // Label destacado abaixo do picker
-    const lbl = document.getElementById('rel-date-label');
-    if (lbl) lbl.textContent = isToday ? '📍 Mostrando dados de hoje — ' + dataFormatada : '📍 Mostrando dados de ' + dataFormatada;
-  } else {
-    const lastWeek = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse()[0] || today;
-    postRows = allPosts.filter(r => r.data >= lastWeek);
-    document.getElementById('rel-title').textContent = 'Relatório da semana';
-    document.getElementById('rel-subtitle').textContent = '// desde ' + lastWeek;
-    document.getElementById('rel-posts-title').textContent = '📹 vídeos postados desde a última atualização';
-    const lbl = document.getElementById('rel-date-label');
-    if (lbl) lbl.textContent = '📍 Mostrando acumulado desde ' + lastWeek;
+function previewExport() {
+  const rows = getExpData();
+  if (!rows) return;
+  const from = document.getElementById('exp-from').value;
+  const to = document.getElementById('exp-to').value;
+  if (!rows.length) {
+    document.getElementById('exp-preview').style.display='block';
+    document.getElementById('exp-preview-content').innerHTML='<div class="no-data">Nenhum dado no período selecionado.</div>';
+    return;
   }
-
-  const totalPostsHoje = postRows.reduce((s, r) => s + (parseInt(r.posts) || 0), 0);
-
-  // totais da semana atual
-  const latestWeek = [...new Set(allData.map(r => r.semana))].filter(Boolean).sort().reverse()[0];
-  const weekRows = allData.filter(r => r.semana === latestWeek);
-  const totalViews = weekRows.reduce((s, r) => s + (parseFloat(r.views) || 0), 0);
-  const totalInt   = weekRows.reduce((s, r) => s + (parseFloat(r.interacoes) || 0), 0);
-  const totalSeg   = weekRows.reduce((s, r) => s + (parseFloat(r.seguidores) || 0), 0);
-
-  // quantas contas postaram hoje
-  const contasAtivas = [...new Set(postRows.filter(r => (parseInt(r.posts)||0) > 0).map(r => r.conta))].length;
-
-  document.getElementById('rel-totals').innerHTML = `
-    <div class="total-card"><div class="total-label">vídeos ${relMode==='dia'?'hoje':'no período'}</div><div class="total-value">${totalPostsHoje}</div><div class="total-sub">${contasAtivas} conta(s) ativa(s)</div></div>
-    <div class="total-card green"><div class="total-label">views (semana)</div><div class="total-value">${fmt(totalViews)}</div><div class="total-sub">última semana registrada</div></div>
-    <div class="total-card amber"><div class="total-label">interações (semana)</div><div class="total-value">${fmt(totalInt)}</div><div class="total-sub">likes + comentários</div></div>
-    <div class="total-card red"><div class="total-label">seguidores (semana)</div><div class="total-value">${totalSeg >= 0 ? '+' : ''}${fmt(totalSeg)}</div><div class="total-sub">ganho líquido</div></div>`;
-
-  // --- CARDS DE POSTS ---
-  if (!postRows.length) {
-    document.getElementById('rel-posts-cards').innerHTML = '<div class="no-data">Nenhum post registrado para este período.</div>';
-  } else {
-    // agrupa por conta
-    const byAccount = {};
-    postRows.forEach(r => {
-      const key = r.conta + '|' + r.dono;
-      if (!byAccount[key]) byAccount[key] = { conta: r.conta, dono: r.dono, plat: r.plataforma, dias: {} };
-      byAccount[key].dias[r.data] = (byAccount[key].dias[r.data] || 0) + (parseInt(r.posts) || 0);
-    });
-    const sorted = Object.values(byAccount).sort((a, b) => {
-      const ta = Object.values(a.dias).reduce((s, v) => s + v, 0);
-      const tb = Object.values(b.dias).reduce((s, v) => s + v, 0);
-      return tb - ta;
-    });
-    document.getElementById('rel-posts-cards').innerHTML = sorted.map(acc => {
-      const total = Object.values(acc.dias).reduce((s, v) => s + v, 0);
-      const platColor = acc.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-      const dias = Object.entries(acc.dias).sort((a,b) => a[0].localeCompare(b[0]));
-      const bars = '▮'.repeat(Math.min(total, 15)) + (total > 15 ? '…' : '');
-      return `<div class="account-card" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
-        <div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
-            <span style="font-size:14px;font-weight:700;color:var(--text)">${acc.conta}</span>
-            <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${acc.plat}</span>
-          </div>
-          <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${acc.dono}</div>
-          ${relMode === 'semana' ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${dias.map(([d,n]) => `<span style="font-size:10px;font-family:'IBM Plex Mono',monospace;background:var(--surface2);border-radius:6px;padding:2px 7px;color:var(--muted)">${d.slice(5)} <strong style="color:var(--text)">${n}</strong></span>`).join('')}</div>` : ''}
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:22px;font-weight:800;color:var(--accent)">${total}</div>
-          <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--accent);letter-spacing:1px">${bars}</div>
-          <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${relMode==='dia'?'vídeos hoje':'vídeos no período'}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // --- RANKING ENGAJAMENTO ---
-  const medals = ['🥇','🥈','🥉'];
-  if (!weekRows.length) {
-    document.getElementById('rel-ranking').innerHTML = '<div class="no-data">Sem dados de semana para ranking.</div>';
-  } else {
-    const ranked = weekRows.map(r => {
-      const it = parseFloat(r.interacoes) || 0;
-      const v  = parseFloat(r.views) || 0;
-      const contaInfo = CONTAS.find(c => c.handle === r.conta && c.dono === r.dono) || CONTAS.find(c => c.handle === r.conta);
-      const totalSeg = contaInfo ? contaInfo.totalSeg : 1;
-      const engRate = totalSeg > 0 ? (it / totalSeg * 100) : 0;
-      return { ...r, engRate, totalSeg, it, v };
-    }).sort((a, b) => b.engRate - a.engRate);
-
-    document.getElementById('rel-ranking').innerHTML = `<div class="chart-card">
-      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">semana: ${latestWeek || '—'} · score = interações ÷ seguidores × 100</div>
-      ${ranked.map((r, i) => {
-        const plat = r.plataforma || 'Instagram';
-        const platColor = plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-        const barW = Math.min(100, (r.engRate / (ranked[0].engRate || 1)) * 100);
-        const medal = medals[i] || `#${i+1}`;
-        const color = COLORS[i % COLORS.length];
-        // contagem de posts dessa conta nessa semana
-        const postsCount = allPosts.filter(p => p.conta === r.conta && p.dono === r.dono && p.data >= (latestWeek||'')).reduce((s,p) => s+(parseInt(p.posts)||0), 0);
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-              <span style="font-size:13px;font-weight:700;color:var(--text)">${r.conta}</span>
+  const tv = rows.reduce((s,r)=>s+(parseFloat(r.views)||0),0);
+  const ti = rows.reduce((s,r)=>s+(parseFloat(r.interacoes)||0),0);
+  const ts = rows.reduce((s,r)=>s+(parseFloat(r.seguidores)||0),0);
+  const byAccount = {};
+  rows.forEach(r => {
+    const key = r.conta+'|'+(r.plataforma||'Instagram');
+    if (!byAccount[key]) byAccount[key]={conta:r.conta,dono:r.dono,plataforma:r.plataforma||'Instagram',views:0,interacoes:0,seguidores:0};
+    byAccount[key].views+=parseFloat(r.views)||0;
+    byAccount[key].interacoes+=parseFloat(r.interacoes)||0;
+    byAccount[key].seguidores+=parseFloat(r.seguidores)||0;
+  });
+  const accounts = Object.values(byAccount).sort((a,b)=>b.views-a.views);
+  document.getElementById('exp-preview').style.display='block';
+  document.getElementById('exp-preview-content').innerHTML = `
+    <div class="chart-card" style="margin-bottom:1rem">
+      <div class="chart-title">📊 relatório — ${from} até ${to}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.5rem">
+        <div class="metric-pill"><div class="metric-pill-label">Total views</div><div class="metric-pill-val">${fmt(tv)}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Total interações</div><div class="metric-pill-val">${fmt(ti)}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Novos seg.</div><div class="metric-pill-val ${ts<0?'neg':''}">${ts>=0?'+':''}${fmt(ts)}</div></div>
+        <div class="metric-pill"><div class="metric-pill-label">Semanas</div><div class="metric-pill-val">${[...new Set(rows.map(r=>r.semana))].length}</div></div>
+      </div>
+      ${accounts.map(a=>{
+        const plat=a.plataforma||'Instagram';
+        const platColor=plat==='TikTok'?'#ff3b5c':'#e1306c';
+        const contaInfo=CONTAS.find(c=>c.handle===a.conta&&c.dono===a.dono)||CONTAS.find(c=>c.handle===a.conta);
+        const totalSeg=contaInfo?contaInfo.totalSeg:1;
+        const eng=totalSeg>0?(a.interacoes/totalSeg*100).toFixed(1):'—';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${a.conta}</span>
               <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${plat}</span>
-              <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${r.dono}</span>
-              ${postsCount > 0 ? `<span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 7px;border-radius:20px;background:rgba(124,106,247,0.12);color:var(--accent)">${postsCount} vídeos</span>` : ''}
             </div>
-            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
-              <div style="height:100%;width:${barW}%;background:${color};border-radius:4px;transition:width 0.6s ease"></div>
-            </div>
-            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
-              ${fmt(r.it)} interações · ${fmt(r.v)} views · ${fmt(r.totalSeg)} seguidores
-            </div>
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${a.dono}</div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:16px;font-weight:800;color:${color}">${r.engRate.toFixed(2)}%</div>
-            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng/seg</div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${fmt(a.views)} views</div>
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent)">${eng}% eng.</div>
           </div>
         </div>`;
       }).join('')}
     </div>`;
+}
+
+function downloadCSV() {
+  const rows = getExpData();
+  if (!rows||!rows.length) { showToast('Nenhum dado no período!'); return; }
+  const from = document.getElementById('exp-from').value;
+  const to = document.getElementById('exp-to').value;
+  const header = 'semana,conta,dono,plataforma,views,interacoes,seguidores,conteudos';
+  const lines = rows.map(r=>`${r.semana},${r.conta},${r.dono},${r.plataforma||'Instagram'},${r.views||0},${r.interacoes||0},${r.seguidores||0},${r.conteudos||0}`);
+  const blob = new Blob([header+'\n'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `relatorio_pavanato_${from}_${to}.csv`;
+  a.click();
+  showToast('✓ CSV baixado!');
+}
+
+function downloadPDF() {
+  const rows = getExpData();
+  if (!rows||!rows.length) { showToast('Nenhum dado no período!'); return; }
+  const from = document.getElementById('exp-from').value;
+  const to = document.getElementById('exp-to').value;
+  const tv=rows.reduce((s,r)=>s+(parseFloat(r.views)||0),0);
+  const ti=rows.reduce((s,r)=>s+(parseFloat(r.interacoes)||0),0);
+  const ts=rows.reduce((s,r)=>s+(parseFloat(r.seguidores)||0),0);
+
+  const byAccount={};
+  rows.forEach(r=>{
+    const key=r.conta+'|'+(r.plataforma||'Instagram');
+    if(!byAccount[key]) byAccount[key]={conta:r.conta,dono:r.dono,plataforma:r.plataforma||'Instagram',views:0,interacoes:0,seguidores:0};
+    byAccount[key].views+=parseFloat(r.views)||0;
+    byAccount[key].interacoes+=parseFloat(r.interacoes)||0;
+    byAccount[key].seguidores+=parseFloat(r.seguidores)||0;
+  });
+  const accounts=Object.values(byAccount).sort((a,b)=>b.views-a.views);
+  const PCOLORS=['#7c6af7','#e85d75','#3ecf8e','#f5a623','#e1306c','#64b5f6','#ff3b5c','#a78bfa','#34d399'];
+
+  // ranking de engajamento
+  const ranked = accounts.map((a,i)=>{
+    const contaInfo=CONTAS.find(c=>c.handle===a.conta&&c.dono===a.dono)||CONTAS.find(c=>c.handle===a.conta);
+    const totalSeg=contaInfo?contaInfo.totalSeg:1;
+    const eng=totalSeg>0?(a.interacoes/totalSeg*100):0;
+    return {...a, eng, color: PCOLORS[i%PCOLORS.length]};
+  }).sort((a,b)=>b.eng-a.eng);
+
+  // SVG bar chart — views
+  function svgBars(data, valueKey, color, width=520, height=180) {
+    const max = Math.max(...data.map(d=>d[valueKey]||0))||1;
+    const barW = Math.floor((width-40) / data.length) - 8;
+    const bars = data.map((d,i)=>{
+      const val = d[valueKey]||0;
+      const bh = Math.max(2, Math.floor((val/max)*(height-40)));
+      const x = 40 + i*(barW+8);
+      const y = height-20-bh;
+      const label = d.dono.split(' ')[0];
+      const c = d.color || PCOLORS[i%PCOLORS.length];
+      return `<rect x="${x}" y="${y}" width="${barW}" height="${bh}" rx="4" fill="${c}" opacity="0.9"/>
+        <text x="${x+barW/2}" y="${height-4}" text-anchor="middle" font-size="9" fill="#888" font-family="Arial">${label}</text>
+        <text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="8" fill="${c}" font-weight="bold" font-family="Arial">${fmt(val)}</text>`;
+    }).join('');
+    // y axis lines
+    const lines = [0,0.25,0.5,0.75,1].map(p=>{
+      const y = height-20-Math.floor(p*(height-40));
+      return `<line x1="35" y1="${y}" x2="${width}" y2="${y}" stroke="#eee" stroke-width="1"/>
+        <text x="30" y="${y+3}" text-anchor="end" font-size="8" fill="#bbb" font-family="Arial">${fmt(max*p)}</text>`;
+    }).join('');
+    return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${lines}${bars}</svg>`;
   }
 
-  // --- SAÚDE DAS CONTAS ---
-  document.getElementById('rel-saude').innerHTML = CONTAS.map((c, idx) => {
-    const weekData = weekRows.find(r => r.conta === c.handle && r.dono === c.dono) || weekRows.find(r => r.conta === c.handle);
-    const postsHoje = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data === activeDate).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
-    const postsSemana = allPosts.filter(p => p.conta === c.handle && p.dono === c.dono && p.data >= (latestWeek||'')).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
-    const views    = weekData ? (parseFloat(weekData.views)      || 0) : null;
-    const inter    = weekData ? (parseFloat(weekData.interacoes) || 0) : null;
-    const seg      = weekData ? (parseFloat(weekData.seguidores) || 0) : null;
-    const conts    = weekData ? (weekData.conteudos || '—')            : '—';
-    const engRate  = (inter !== null && c.totalSeg > 0) ? (inter / c.totalSeg * 100) : null;
-    const viewEng  = (inter !== null && views > 0)      ? (inter / views * 100)      : null;
-    const platColor = c.plat === 'TikTok' ? '#ff3b5c' : '#e1306c';
-    const color    = COLORS[idx % COLORS.length];
-    const statusColor = postsHoje > 0 ? 'var(--green)' : 'var(--amber)';
-    const statusText  = postsHoje > 0 ? `✓ ${postsHoje} ${isToday ? 'hoje' : 'neste dia'}` : `○ sem posts ${isToday ? 'hoje' : 'neste dia'}`;
-    const segColor = seg === null ? 'var(--muted)' : seg >= 0 ? 'var(--green)' : 'var(--accent2)';
-    const semDados = views === null;
-    return `<div class="account-card">
-      <!-- cabeçalho -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:8px;flex-wrap:wrap">
-        <div>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-size:14px;font-weight:800;color:var(--text)">${c.handle}</span>
-            <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:${platColor}22;color:${platColor};font-family:'IBM Plex Mono',monospace">${c.plat}</span>
-          </div>
-          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-top:3px">${c.dono}</div>
-        </div>
-        <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:${statusColor};background:${statusColor}18;padding:3px 10px;border-radius:20px;white-space:nowrap;align-self:flex-start">${statusText}</span>
-      </div>
+  // SVG horizontal bar for ranking
+  function svgRankBars(data, width=520) {
+    const max = Math.max(...data.map(d=>d.eng))||1;
+    const rowH = 32;
+    const height = data.length * rowH + 10;
+    const bars = data.map((d,i)=>{
+      const bw = Math.max(4, Math.floor((d.eng/max)*(width-180)));
+      const y = i*rowH + 6;
+      const medals = ['🥇','🥈','🥉'];
+      return `<text x="0" y="${y+16}" font-size="14" font-family="Arial">${medals[i]||''}</text>
+        <text x="22" y="${y+16}" font-size="10" fill="#333" font-family="Arial" font-weight="bold">${d.conta}</text>
+        <text x="22" y="${y+26}" font-size="8" fill="#aaa" font-family="Arial">${d.dono}</text>
+        <rect x="175" y="${y+4}" width="${bw}" height="18" rx="4" fill="${d.color}" opacity="0.85"/>
+        <text x="${175+bw+6}" y="${y+16}" font-size="9" fill="${d.color}" font-family="Arial" font-weight="bold">${d.eng.toFixed(1)}%</text>`;
+    }).join('');
+    return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
+  }
 
-      <!-- barra de engajamento -->
-      ${engRate !== null ? `
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">engajamento/seguidores</span>
-          <span style="font-size:12px;font-weight:800;color:${color}">${engRate.toFixed(2)}%</span>
-        </div>
-        <div style="background:var(--surface2);border-radius:4px;height:5px;overflow:hidden">
-          <div style="height:100%;width:${Math.min(engRate*5,100)}%;background:${color};border-radius:4px"></div>
-        </div>
-      </div>` : ''}
+  // posts por dia
+  const postsNoPeriodo = allPosts.filter(p=>p.data>=from&&p.data<=to);
+  const days=[...new Set(postsNoPeriodo.map(p=>p.data))].sort().reverse();
+  const postsSection = days.length===0 ? '' : `
+    <div class="section-break"></div>
+    <div class="section-title">📅 Posts por dia</div>
+    ${days.map(day=>{
+      const dayPosts=postsNoPeriodo.filter(p=>p.data===day);
+      const maxP=Math.max(...dayPosts.map(p=>parseInt(p.posts)||0));
+      const todasContas=CONTAS.map(c=>c.handle);
+      const comPost=dayPosts.map(p=>p.conta);
+      const semPost=todasContas.filter(h=>!comPost.includes(h));
+      return `<div class="day-block">
+        <div class="day-label">${day}</div>
+        <table class="posts-table">
+          <thead><tr><th>Conta</th><th>Responsável</th><th style="text-align:center">Posts</th><th style="text-align:center">Status</th></tr></thead>
+          <tbody>
+            ${dayPosts.sort((a,b)=>(parseInt(b.posts)||0)-(parseInt(a.posts)||0)).map(p=>{
+              const n=parseInt(p.posts)||0;
+              const best=n===maxP&&n>0;
+              return `<tr class="${best?'best-row':''}">
+                <td><strong>${p.conta}</strong></td>
+                <td style="color:#666">${p.dono}</td>
+                <td style="text-align:center;font-weight:700;font-size:15px;color:${n===0?'#ddd':'#111'}">${n}</td>
+                <td style="text-align:center">${best?'<span class="badge-best">🏆 TOP</span>':n===0?'<span class="badge-zero">— zero</span>':''}</td>
+              </tr>`;
+            }).join('')}
+            ${semPost.length?`<tr class="zero-row"><td colspan="4">⚠ Sem registro: ${semPost.join(', ')}</td></tr>`:''}
+          </tbody>
+        </table>
+      </div>`;
+    }).join('')}`;
 
-      <!-- grid de métricas — todos os dados -->
-      <div class="rel-conta-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        <div class="metric-pill">
-          <div class="metric-pill-label">visualizações</div>
-          <div class="metric-pill-val">${views !== null ? fmt(views) : '—'}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">interações</div>
-          <div class="metric-pill-val">${inter !== null ? fmt(inter) : '—'}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">seg. líquidos</div>
-          <div class="metric-pill-val" style="color:${segColor}">${seg !== null ? (seg >= 0 ? '+' : '') + fmt(seg) : '—'}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">conteúdos</div>
-          <div class="metric-pill-val">${conts}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">${isToday ? 'posts hoje' : 'posts neste dia'}</div>
-          <div class="metric-pill-val" style="color:${postsHoje>0?'var(--green)':'var(--muted)'}">${postsHoje || 0}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">posts semana</div>
-          <div class="metric-pill-val">${postsSemana || 0}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">eng/seg</div>
-          <div class="metric-pill-val" style="color:${color}">${engRate !== null ? engRate.toFixed(2)+'%' : '—'}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">eng/views</div>
-          <div class="metric-pill-val">${viewEng !== null ? viewEng.toFixed(2)+'%' : '—'}</div>
-        </div>
-        <div class="metric-pill">
-          <div class="metric-pill-label">base seguidores</div>
-          <div class="metric-pill-val">${fmt(c.totalSeg)}</div>
-        </div>
-      </div>
-      ${semDados ? `<div style="margin-top:10px;font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);text-align:center">sem dados semanais registrados</div>` : ''}
-    </div>`;
-  }).join('')
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Relatório Pavanato ${from} – ${to}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#111;padding:2.5rem;max-width:860px;margin:0 auto}
+    .cover{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:1.5rem;border-bottom:3px solid #7c6af7;margin-bottom:2rem}
+    .cover h1{font-size:26px;font-weight:800;color:#111}
+    .cover .sub{font-size:13px;color:#888;margin-top:4px}
+    .cover .period-tag{background:#7c6af7;color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;font-weight:600}
+    .totals{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:2.5rem}
+    .tcard{border-radius:12px;padding:16px;background:#f7f7fb;border-top:3px solid #7c6af7}
+    .tcard.green{border-color:#3ecf8e}
+    .tcard.amber{border-color:#f5a623}
+    .tcard.red{border-color:#e85d75}
+    .tcard .lbl{font-size:10px;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+    .tcard .val{font-size:22px;font-weight:800;color:#111}
+    .section-title{font-size:13px;font-weight:700;color:#7c6af7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;margin-top:2rem}
+    .section-break{border-top:1px solid #eee;margin:2rem 0}
+    .chart-box{background:#fafafa;border-radius:12px;padding:1.25rem;margin-bottom:1.5rem}
+    .chart-box h3{font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem}
+    table{width:100%;border-collapse:collapse;margin-bottom:1.5rem}
+    th{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:2px solid #eee;text-align:left}
+    td{padding:9px 10px;font-size:12px;border-bottom:1px solid #f0f0f0}
+    .plat{font-size:9px;padding:2px 7px;border-radius:10px;background:#ede9ff;color:#7c6af7;font-weight:600}
+    .plat.tiktok{background:#ffe4e8;color:#e85d75}
+    .day-block{margin-bottom:1.5rem;page-break-inside:avoid}
+    .day-label{font-size:12px;font-weight:700;background:#f5f3ff;color:#7c6af7;padding:6px 12px;border-radius:8px;margin-bottom:8px;display:inline-block}
+    .posts-table th,.posts-table td{padding:7px 10px;font-size:11px}
+    .best-row{background:#f0fff8}
+    .best-row td{font-weight:600}
+    .zero-row td{background:#fff8f8;color:#e85d75;font-size:11px;padding:7px 10px}
+    .badge-best{background:#22c55e;color:#fff;font-size:9px;padding:2px 8px;border-radius:10px;font-weight:700}
+    .badge-zero{background:#fee2e2;color:#e85d75;font-size:9px;padding:2px 8px;border-radius:10px}
+    .footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #eee;font-size:10px;color:#ccc;text-align:center}
+    @media print{
+      body{padding:1rem}
+      .section-break{margin:1rem 0}
+    }
+  </style></head><body>
+
+  <div class="cover">
+    <div>
+      <h1>Relatório Pavanato & Equipe</h1>
+      <div class="sub">Gerado em ${new Date().toLocaleDateString('pt-BR')} — pavanato.report</div>
+    </div>
+    <div class="period-tag">${from} → ${to}</div>
+  </div>
+
+  <div class="totals">
+    <div class="tcard"><div class="lbl">Visualizações</div><div class="val">${fmt(tv)}</div></div>
+    <div class="tcard green"><div class="lbl">Interações</div><div class="val">${fmt(ti)}</div></div>
+    <div class="tcard amber"><div class="lbl">Novos seg.</div><div class="val">${ts>=0?'+':''}${fmt(ts)}</div></div>
+    <div class="tcard red"><div class="lbl">Contas</div><div class="val">${accounts.length}</div></div>
+  </div>
+
+  <div class="section-title">📊 Visualizações por conta</div>
+  <div class="chart-box">
+    <h3>Total de visualizações no período</h3>
+    ${svgBars(accounts.map((a,i)=>({...a,color:PCOLORS[i%PCOLORS.length]})),'views')}
+  </div>
+
+  <div class="section-title">💬 Interações por conta</div>
+  <div class="chart-box">
+    <h3>Total de interações no período</h3>
+    ${svgBars(accounts.map((a,i)=>({...a,color:PCOLORS[i%PCOLORS.length]})),'interacoes')}
+  </div>
+
+  <div class="section-title">🏆 Ranking de engajamento</div>
+  <div class="chart-box">
+    <h3>Interações ÷ total de seguidores × 100</h3>
+    ${svgRankBars(ranked)}
+  </div>
+
+  <div class="section-break"></div>
+  <div class="section-title">📋 Tabela completa</div>
+  <table>
+    <thead><tr><th>Conta</th><th>Responsável</th><th>Plataforma</th><th>Views</th><th>Interações</th><th>Seguidores</th><th>Eng%</th></tr></thead>
+    <tbody>${accounts.map((a,i)=>{
+      const contaInfo=CONTAS.find(c=>c.handle===a.conta&&c.dono===a.dono)||CONTAS.find(c=>c.handle===a.conta);
+      const totalSeg=contaInfo?contaInfo.totalSeg:1;
+      const eng=totalSeg>0?(a.interacoes/totalSeg*100).toFixed(1):'—';
+      return `<tr><td><strong style="color:${PCOLORS[i%PCOLORS.length]}">${a.conta}</strong></td><td>${a.dono}</td><td><span class="plat ${a.plataforma==='TikTok'?'tiktok':''}">${a.plataforma}</span></td><td>${fmt(a.views)}</td><td>${fmt(a.interacoes)}</td><td>${a.seguidores>=0?'+':''}${fmt(a.seguidores)}</td><td><strong>${eng}%</strong></td></tr>`;
+    }).join('')}</tbody>
+  </table>
+
+  ${postsSection}
+
+  <div class="footer">pavanato.report — uso interno</div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  win.document.close();
 }
-buildForm();
-buildPostsForm();
-loadData();
+
+  // posts por dia — filtra allPosts pelo período
+  const postsNoperiodo = allPosts.filter(p => p.data >= from && p.data <= to);
+  const days = [...new Set(postsNoperiodo.map(p=>p.data))].sort().reverse();
+
+  // monta seção de posts por dia
+  const postsSection = days.length === 0 ? '' : `
+    <h2 style="font-size:16px;margin:2rem 0 1rem;border-top:2px solid #eee;padding-top:1.5rem">Posts por dia</h2>
+    ${days.map(day => {
+      const dayPosts = postsNoperiodo.filter(p=>p.data===day);
+      const maxPosts = Math.max(...dayPosts.map(p=>parseInt(p.posts)||0));
+      const todasContas = CONTAS.map(c=>c.handle);
+      const contasComPost = dayPosts.map(p=>p.conta);
+      const semPost = todasContas.filter(h => !contasComPost.includes(h));
+      return `<div style="margin-bottom:1.5rem;page-break-inside:avoid">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px;padding:6px 10px;background:#f9f9f9;border-radius:6px">📅 ${day}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="text-align:left;padding:7px 10px;font-size:11px;color:#888;border-bottom:1px solid #eee">Conta</th>
+            <th style="text-align:left;padding:7px 10px;font-size:11px;color:#888;border-bottom:1px solid #eee">Responsável</th>
+            <th style="text-align:center;padding:7px 10px;font-size:11px;color:#888;border-bottom:1px solid #eee">Posts</th>
+            <th style="text-align:center;padding:7px 10px;font-size:11px;color:#888;border-bottom:1px solid #eee">Status</th>
+          </tr></thead>
+          <tbody>
+            ${dayPosts.sort((a,b)=>(parseInt(b.posts)||0)-(parseInt(a.posts)||0)).map(p=>{
+              const n=parseInt(p.posts)||0;
+              const isBest = n===maxPosts && n>0;
+              const rowBg = isBest ? '#f0fff8' : '';
+              const badge = isBest ? '<span style="background:#22c55e;color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700">🏆 mais posts</span>' : '';
+              return `<tr style="background:${rowBg}">
+                <td style="padding:7px 10px;font-size:12px;font-weight:${isBest?'700':'400'};border-bottom:1px solid #eee">${p.conta}</td>
+                <td style="padding:7px 10px;font-size:12px;color:#666;border-bottom:1px solid #eee">${p.dono}</td>
+                <td style="padding:7px 10px;font-size:14px;font-weight:700;text-align:center;border-bottom:1px solid #eee;color:${n===0?'#ccc':'#111'}">${n}</td>
+                <td style="padding:7px 10px;text-align:center;border-bottom:1px solid #eee">${badge}</td>
+              </tr>`;
+            }).join('')}
+            ${semPost.length ? `<tr style="background:#fff8f8">
+              <td colspan="4" style="padding:7px 10px;font-size:11px;color:#e85d75;border-bottom:1px solid #eee">
+                ⚠ Sem registro neste dia: ${semPost.join(', ')}
+              </td>
+            </tr>` : ''}
+          </tbody>
+        </table>
+      </div>`;
+    }).join('')}`;
+
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Pavanato ${from} - ${to}</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:2rem;color:#111;max-width:800px;margin:0 auto}
+    h1{font-size:22px;margin-bottom:4px}
+    .period{font-size:13px;color:#666;margin-bottom:2rem}
+    .totals{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:2rem}
+    .total-box{background:#f5f5f5;border-radius:8px;padding:12px;text-align:center}
+    .total-box .label{font-size:11px;color:#888;margin-bottom:4px}
+    .total-box .value{font-size:20px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th{text-align:left;padding:10px 12px;font-size:12px;color:#888;border-bottom:2px solid #eee;text-transform:uppercase}
+    td{padding:10px 12px;font-size:13px;border-bottom:1px solid #eee}
+    .plat{font-size:10px;padding:2px 6px;border-radius:10px;background:#f0e6ff;color:#7c6af7}
+    .plat.tiktok{background:#ffe6ea;color:#e85d75}
+    .footer{margin-top:3rem;font-size:11px;color:#aaa;text-align:center}
+    @media print{body{padding:1rem}}
+  </style></head><body>
+  <h1>Relatório Pavanato & Equipe</h1>
+  <div class="period">Período: ${from} até ${to} — gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+  <div class="totals">
+    <div class="total-box"><div class="label">Visualizações</div><div class="value">${fmt(tv)}</div></div>
+    <div class="total-box"><div class="label">Interações</div><div class="value">${fmt(ti)}</div></div>
+    <div class="total-box"><div class="label">Novos seg.</div><div class="value">${ts>=0?'+':''}${fmt(ts)}</div></div>
+    <div class="total-box"><div class="label">Contas</div><div class="value">${accounts.length}</div></div>
+  </div>
+  <h2 style="font-size:16px;margin:0 0 1rem">Desempenho por conta</h2>
+  <table><thead><tr><th>Conta</th><th>Responsável</th><th>Plataforma</th><th>Views</th><th>Interações</th><th>Seguidores</th><th>Eng%</th></tr></thead>
+  <tbody>${accounts.map(a=>{
+    const contaInfo=CONTAS.find(c=>c.handle===a.conta&&c.dono===a.dono)||CONTAS.find(c=>c.handle===a.conta);
+    const totalSeg=contaInfo?contaInfo.totalSeg:1;
+    const eng=totalSeg>0?(a.interacoes/totalSeg*100).toFixed(1):'—';
+    return `<tr><td><strong>${a.conta}</strong></td><td>${a.dono}</td><td><span class="plat ${a.plataforma==='TikTok'?'tiktok':''}">${a.plataforma}</span></td><td>${fmt(a.views)}</td><td>${fmt(a.interacoes)}</td><td>${a.seguidores>=0?'+':''}${fmt(a.seguidores)}</td><td>${eng}%</td></tr>`;
+  }).join('')}</tbody></table>
+  ${postsSection}
+  <div class="footer">pavanato.report</div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  win.document.close();
+}
 </script>
 </body>
 </html>
