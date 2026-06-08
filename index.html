@@ -124,6 +124,10 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 
     <div class="section-header"><div class="section-dot" style="background:var(--amber)"></div><div class="section-title">🏆 ranking de engajamento</div></div>
     <div id="ranking-list"></div>
+    <div class="chart-card" style="margin-top:1rem">
+      <div class="chart-title">score por conta — (eng/views × 60%) + (interações/seg × 40%)</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="cRanking"></canvas></div>
+    </div>
 
     <div class="section-header"><div class="section-dot" style="background:var(--accent)"></div><div class="section-title">gráficos comparativos</div></div>
     <div class="charts-grid">
@@ -338,12 +342,24 @@ function renderDashboard() {
   const ti = rows.reduce((s,r) => s + (parseFloat(r.interacoes)||0), 0);
   const ts = rows.reduce((s,r) => s + (parseFloat(r.seguidores)||0), 0);
 
+  // posts totais da semana selecionada (soma de todos os dias dentro da semana)
+  const weekStart = week;
+  const weekEnd   = week; // semana = chave exata; posts podem ter datas diárias
+  // pega todos os posts cujo 'data' está entre segunda e domingo da semana
+  const weekDate  = new Date(week);
+  const mon = new Date(weekDate); mon.setDate(weekDate.getDate() - weekDate.getDay() + 1);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const monStr = mon.toISOString().split('T')[0];
+  const sunStr = sun.toISOString().split('T')[0];
+  const postsWeek = allPosts.filter(p => p.data >= monStr && p.data <= sunStr);
+  const totalPosts = postsWeek.reduce((s,p) => s+(parseInt(p.posts)||0), 0);
+
   document.getElementById('dash-period').textContent = '// semana de ' + week;
   document.getElementById('dash-totals').innerHTML = `
     <div class="total-card"><div class="total-label">total visualizações</div><div class="total-value">${fmt(tv)}</div><div class="total-sub">todas as contas</div></div>
     <div class="total-card green"><div class="total-label">total interações</div><div class="total-value">${fmt(ti)}</div><div class="total-sub">likes + comentários</div></div>
     <div class="total-card amber"><div class="total-label">novos seguidores</div><div class="total-value">${ts>=0?'+':''}${fmt(ts)}</div><div class="total-sub">líquido combinado</div></div>
-    <div class="total-card red"><div class="total-label">contas ativas</div><div class="total-value">${rows.length}</div><div class="total-sub">Instagram + TikTok</div></div>`;
+    <div class="total-card red"><div class="total-label">posts na semana</div><div class="total-value">${totalPosts||fmt(rows.reduce((s,r)=>s+(parseInt(r.conteudos)||0),0))}</div><div class="total-sub">vídeos publicados</div></div>`;
 
   document.getElementById('accounts-list').innerHTML = rows.map((r,i) => {
     const seg = parseFloat(r.seguidores)||0;
@@ -370,48 +386,85 @@ function renderDashboard() {
       </div></div>`;
   }).join('');
 
-  // RANKING
+  // RANKING — score = (engRate * 0.6) + (segScore * 0.4)
+  // engRate  = interações / views * 100
+  // segScore = interações / totalSeguidores * 100
   const medals = ['🥇','🥈','🥉'];
   const ranked = rows.map(r => {
     const it2 = parseFloat(r.interacoes)||0;
     const v2  = parseFloat(r.views)||0;
     const contaInfo = CONTAS.find(c => c.handle===r.conta && c.dono===r.dono) || CONTAS.find(c => c.handle===r.conta);
     const totalSeg  = (contaInfo && contaInfo.totalSeg) ? contaInfo.totalSeg : 1;
-    const engRate   = totalSeg > 0 ? (it2 / totalSeg * 100) : 0;
-    return {...r, engRate, totalSeg};
-  }).sort((a,b) => b.engRate - a.engRate);
+    const engRate   = v2  > 0 ? (it2 / v2  * 100) : 0;  // interações/views×100
+    const segScore  = totalSeg > 0 ? (it2 / totalSeg * 100) : 0; // interações/seg×100
+    const score     = (engRate * 0.6) + (segScore * 0.4);
+    return {...r, engRate, segScore, score, totalSeg};
+  }).sort((a,b) => b.score - a.score);
 
   document.getElementById('ranking-list').innerHTML = `
     <div class="chart-card">
-      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">score = interações ÷ total de seguidores × 100</div>
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-bottom:1rem">
+        score = (interações/views × 60%) + (interações/seguidores × 40%)
+      </div>
       ${ranked.map((r,i) => {
         const plat = r.plataforma||'Instagram';
         const platColor = plat==='TikTok'?'#ff3b5c':'#e1306c';
-        const barW  = Math.min(100, (r.engRate / (ranked[0].engRate||1)) * 100);
+        const barW  = Math.min(100, (r.score / (ranked[0].score||1)) * 100);
         const medal = medals[i] || `#${i+1}`;
         const color = COLORS[i%COLORS.length];
+        // posts da semana para essa conta
+        const contaPosts = postsWeek.filter(p => p.conta===r.conta && p.dono===r.dono).reduce((s,p)=>s+(parseInt(p.posts)||0),0)
+                        || postsWeek.filter(p => p.conta===r.conta).reduce((s,p)=>s+(parseInt(p.posts)||0),0);
         return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
           <div style="font-size:20px;width:28px;text-align:center">${medal}</div>
           <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
               <span style="font-size:13px;font-weight:700;color:var(--text)">${r.conta}</span>
               <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:20px;background:${platColor}22;color:${platColor}">${plat}</span>
               <span style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">${r.dono}</span>
+              ${contaPosts>0?`<span style="font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 7px;border-radius:20px;background:rgba(124,106,247,0.15);color:var(--accent)">${contaPosts} posts</span>`:''}
             </div>
-            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:4px">
-              <div style="height:100%;width:${barW}%;background:${color};border-radius:4px"></div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;margin-bottom:5px">
+              <div style="height:100%;width:${barW}%;background:${color};border-radius:4px;transition:width 0.5s"></div>
             </div>
-            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">
-              ${fmt(parseFloat(r.interacoes)||0)} interações ÷ ${fmt(r.totalSeg)} seguidores
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap">
+              <span>eng/views: <span style="color:${color}">${r.engRate.toFixed(1)}%</span></span>
+              <span>eng/seg: <span style="color:${color}">${r.segScore.toFixed(2)}%</span></span>
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:16px;font-weight:800;color:${color}">${r.engRate.toFixed(1)}%</div>
-            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">eng/seg</div>
+            <div style="font-size:18px;font-weight:800;color:${color}">${r.score.toFixed(2)}</div>
+            <div style="font-size:10px;font-family:'IBM Plex Mono',monospace;color:var(--muted)">score</div>
           </div>
         </div>`;
       }).join('')}
     </div>`;
+
+  // gráfico de barras do ranking
+  const rankLabels = ranked.map(r => r.dono||r.conta);
+  const rankColors = ranked.map((_,i) => COLORS[i%COLORS.length]);
+  const boRank = {
+    indexAxis:'y',
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{
+      backgroundColor:'#1c1c27',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,
+      titleColor:'#f0f0f5',bodyColor:'#6b6b80',
+      titleFont:{family:MONO,size:11},bodyFont:{family:MONO,size:11},padding:10,
+      callbacks:{label:ctx=>' score: '+ctx.parsed.x.toFixed(2)}
+    }},
+    scales:{
+      x:{grid:{color:GRID},ticks:{color:TICK,font:{family:MONO,size:10}}},
+      y:{grid:{color:'transparent'},ticks:{color:'#f0f0f5',font:{family:MONO,size:11}}}
+    }
+  };
+  mk('cRanking','bar',rankLabels,[{
+    data:ranked.map(r=>parseFloat(r.score.toFixed(2))),
+    backgroundColor:rankColors.map(c=>c+'cc'),
+    borderColor:rankColors,
+    borderWidth:1,
+    borderRadius:6,
+    borderSkipped:false
+  }],boRank);
 
   const labels = rows.map(r => r.dono||r.conta);
   const vs = rows.map(r => parseFloat(r.views)||0);
