@@ -107,9 +107,9 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 
 <!-- DASHBOARD -->
 <div id="page-dashboard" class="page active">
-  <div id="dash-loading" class="loading"><div class="spinner"></div><span>carregando planilha...</span></div>
+  <div id="dash-loading" class="loading" style="display:none"><div class="spinner"></div><span>carregando planilha...</span></div>
   <div id="dash-error" class="error-box" style="display:none"></div>
-  <div id="dash-content" style="display:none">
+  <div id="dash-content">
     <div class="hero-title" id="dash-period"></div>
     <div class="totals-grid" id="dash-totals"></div>
     <div class="week-selector">
@@ -583,7 +583,6 @@ function showToast(msg) {
 
 buildForm();
 buildPostsForm();
-initExport();
 loadData();
 
 // ===== EXPORTAR =====
@@ -593,6 +592,7 @@ function initExport() {
   document.getElementById('exp-from').value = week;
   document.getElementById('exp-to').value = today;
 }
+initExport();
 
 function setExpRange(days) {
   const today = new Date().toISOString().split('T')[0];
